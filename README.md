@@ -1,10 +1,10 @@
-# Binary Analysis Tool
+# CodeGenome
 
 A comprehensive binary analysis and comparison tool that combines static and dynamic analysis techniques to extract meaningful metrics from executable files and visualize similarities between multiple binaries.
 
 ## Overview
 
-Binary Analysis Tool is designed to help researchers, reverse engineers, and security professionals analyze binary executables by:
+CodeGenome is designed to help researchers, reverse engineers, and security professionals analyze binary executables by:
 
 1. Extracting code structure metrics via static analysis
 2. Monitoring runtime behavior via dynamic analysis
@@ -75,7 +75,7 @@ This tool is particularly useful for:
 ### Basic Usage
 
 ```bash
-python3 binary_analyzer.py base_bin variant1 variant2 [variant3...]
+python3 codegenome.py base_bin variant1 variant2 [variant3...]
 ```
 
 The first binary is considered the "base" or reference binary. All other binaries will be compared against it.
@@ -85,7 +85,7 @@ The first binary is considered the "base" or reference binary. All other binarie
 To include dynamic analysis with syscall tracing:
 
 ```bash
-python3 binary_analyzer.py -strace base_bin variant1 variant2 [variant3...]
+python3 codegenome.py -strace base_bin variant1 variant2 [variant3...]
 ```
 
 The `-strace` flag (or `-insecure` for backward compatibility) enables runtime analysis using strace, which provides more accurate syscall information but requires the binaries to be executable on the current system.
@@ -94,7 +94,7 @@ The `-strace` flag (or `-insecure` for backward compatibility) enables runtime a
 
 ```bash
 # Compare three calculator implementations
-python3 binary_analyzer.py -strace calculator calculator_v2 calculator_beta
+python3 codegenome.py -strace calculator calculator_v2 calculator_beta
 ```
 
 ## Understanding the Output
@@ -152,7 +152,7 @@ The tool analyzes binaries across these key dimensions:
 For binaries that can't be executed (e.g., from different architectures or malware):
 
 ```bash
-python3 binary_analyzer.py base_bin variant1 variant2
+python3 codegenome.py base_bin variant1 variant2
 ```
 
 Without the `-strace` flag, the tool uses only static analysis.
@@ -162,8 +162,65 @@ Without the `-strace` flag, the tool uses only static analysis.
 For analyzing many binaries at once:
 
 ```bash
-python3 binary_analyzer.py -strace reference_bin $(find samples/ -type f -executable)
+python3 codegenome.py -strace reference_bin $(find samples/ -type f -executable)
 ```
+
+## Evaluating Code Generation & Polymorphism
+
+### LLM Code Mutation vs MetaME Polymorphic Engine
+
+This tool is particularly valuable for comparing and evaluating different approaches to code mutation and generation:
+
+#### Analyzing AI-Generated Code Variants
+
+The tool can assess how different Large Language Models (LLMs) approach code generation and mutation:
+
+1. **Implementation Diversity**: Measure how differently each LLM implements the same functionality by comparing:
+   - Instruction mix distributions
+   - Control flow complexity
+   - Memory access patterns
+   - Syscall preferences
+
+2. **Analysis Workflow**:
+   ```bash
+   # Generate equivalent programs with different LLMs
+   # Example: calculators implemented by different AI systems
+   python3 codegenome.py -strace original_calc gpt_calc claude_calc gemini_calc
+   ```
+
+3. **Interpretation**:
+   - Higher distance metrics between LLM variants suggest more diverse implementation strategies
+   - Similar syscall sequences despite different static metrics indicate functional equivalence
+   - Analyze which LLMs produce more efficient code (fewer instructions, better memory usage)
+
+#### Comparing with MetaME Polymorphic Engine
+
+[MetaME](https://github.com/a0rtega/metame) is a known polymorphic engine that transforms binaries while preserving functionality. This tool allows you to:
+
+1. **Detect Polymorphic Transformations**:
+   - Compare original binary with MetaME variants
+   - Observe how static metrics change while dynamic behavior remains similar
+   
+2. **Analysis Workflow**:
+   ```bash
+   # First create variants with MetaME
+   metame original_binary -o metamorphed_variant
+
+   # Then analyze with this tool
+   python3 codegenome.py -strace original_binary metamorphed_variant llm_variant
+   ```
+
+3. **Key Insights**:
+   - MetaME typically shows high static differences but nearly identical syscall patterns
+   - LLM mutations often show more diversity in both static and dynamic behavior
+   - Compare n-gram syscall similarity to identify functionally equivalent code despite structural differences
+
+4. **Research Applications**:
+   - Evaluate LLMs' ability to produce functionally equivalent but structurally diverse code
+   - Assess which approach creates more resilient code variants
+   - Study detection evasion capabilities of different code transformation techniques
+
+This analysis can provide valuable insights for security research, compiler optimization, code diversity studies, and AI code generation benchmarking.
 
 ## Troubleshooting
 
@@ -204,5 +261,4 @@ This tool is released under the MIT License.
 
 ---
 
-*Binary Analysis Tool combines the power of Radare2 and strace to provide deep insights into executable code structure and behavior.*
-
+*CodeGenome combines the power of Radare2 and strace to provide deep insights into executable code structure and behavior.*
