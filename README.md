@@ -53,6 +53,45 @@ This tool is particularly useful for:
 
 ### Installation
 
+#### Method 1: Using Virtual Environment (Recommended)
+
+1. Clone the repository and navigate to it:
+   ```bash
+   git clone <repository-url>
+   cd CodeGenome
+   ```
+
+2. Create and activate a Python virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Install system dependencies:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install radare2 strace
+   
+   # Fedora/RHEL
+   sudo dnf install radare2 strace
+   
+   # Arch Linux
+   sudo pacman -S radare2 strace
+   ```
+
+5. (Optional) For building sample binaries with advanced features:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install libmicrohttpd-dev libcurl4-openssl-dev
+   ```
+
+#### Method 2: System-wide Installation
+
 1. Install Python dependencies:
    ```bash
    pip install r2pipe matplotlib numpy scikit-learn
@@ -71,6 +110,33 @@ This tool is particularly useful for:
    ```
 
 ## Usage
+
+### Quick Start
+
+After installation, you can quickly test the tool with a simple example:
+
+```bash
+# Activate virtual environment (if using Method 1)
+source venv/bin/activate
+
+# Create simple test programs
+echo '#include <stdio.h>
+int main() { printf("Hello World!\\n"); return 0; }' > test1.c
+echo '#include <stdio.h>
+int main() { printf("Hello CodeGenome!\\n"); return 0; }' > test2.c
+
+# Compile them
+gcc -o test1 test1.c
+gcc -o test2 test2.c -O2
+
+# Analyze with CodeGenome
+python3 codegenome.py test1 test2
+```
+
+This will generate:
+- Console output with detailed analysis
+- `radar_comparison.png` - Visual comparison chart
+- `distance_matrix.csv` - Similarity metrics
 
 ### Basic Usage
 

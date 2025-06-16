@@ -1,0 +1,4 @@
+r2pipe>=1.7.0
+matplotlib>=3.5.0
+numpy>=1.21.0
+scikit-learn>=1.0.0
