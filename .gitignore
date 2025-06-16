@@ -44,3 +44,13 @@ Pods/
 # Ignore Python virtual environment
 venv/
 .env/
+
+# Ignore CodeGenome generated files
+radar_comparison.png
+distance_matrix.csv
+*.c
+test1
+test2
+simple_test
+simple_test2
+CLAUDE.md
