@@ -1,4 +1,10 @@
 r2pipe>=1.7.0
-matplotlib>=3.5.0
-numpy>=1.21.0
-scikit-learn>=1.0.0
+rich>=13.0.0
+questionary>=1.10.0
+requests>=2.28.0
+ollama>=0.1.0
+pydantic>=2.0.0
+toml>=0.10.0
+pyfiglet>=0.8.0
+termcolor>=2.0.0
+metame>=0.4
