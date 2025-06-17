@@ -1,0 +1,37 @@
+# CodeGenome Suite v3.0 - Enhanced Agentic AI Edition
+# Configuration for advanced AI-powered variant generation
+# Copy this file to codegenome_workspace/codegenome_config.toml and customize
+
+[analysis]
+enable_dynamic = false
+strace_timeout = 30
+enable_static = true
+output_directory = "analysis_results"
+save_intermediates = true
+generate_reports = true
+
+[metame]
+metame_path = "/usr/local/bin/metame"  # Update with your MetaME installation path
+enabled = false  # Set to true when MetaME is installed
+transformation_passes = 1
+preserve_semantics = true
+custom_rules = []  # Add custom transformation rules here
+
+[ollama]
+model_name = "gemma3:12b"  # Recommended: gemma3:12b for best transformations
+base_url = "http://localhost:11434"
+enabled = true  # Set to true when Ollama is running
+max_variants = 5
+temperature = 0.7
+context_window = 4096
+
+[testing]
+enabled = true
+timeout_per_test = 10
+max_test_cases = 100
+save_test_results = true
+verify_outputs = true
+performance_testing = false
+
+workspace_dir = "codegenome_workspace"
+log_level = "INFO"
