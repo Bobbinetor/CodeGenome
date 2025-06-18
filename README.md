@@ -1,6 +1,6 @@
 # CodeGenome Suite
 
-![CodeGenome Suite](./assets/codegenome-banner.png)
+![CodeGenome Suite](cli.png)
 
 **AI-Powered Code Variant Generation with Advanced Binary Analysis**
 
@@ -25,9 +25,9 @@ CodeGenome is a sophisticated system that generates functionally equivalent C co
 ## ✨ Features
 
 ### 🤖 AI-Powered Variant Generation
-- **Advanced Transformation Strategies**: Leverages six distinct, AI-driven strategies to maximize binary differentiation. These strategies include altering control flow (e.g., converting `for` loops to `while` loops), data types (e.g., `int` to `long`), and algorithmic structure (e.g., iterative to recursive).
-- **LLM-Based Code Restructuring**: Utilizes Large Language Models via Ollama (e.g., `gemma3:12b`) to perform complex, semantics-preserving code transformations that go beyond simple pattern replacement.
-- **Intelligent Prompt Engineering**: Employs a sophisticated prompt templating system (`AI_PROMPT_TEMPLATE`) that instructs the LLM to maintain functional equivalence while diversifying code patterns, variable names, and mathematical expressions.
+- **Advanced Transformation Strategies**: Leverages AI-driven strategies to maximize binary differentiation. These strategies include altering control flow, data types , and algorithmic structure.
+- **LLM-Based Code Restructuring**: Utilizes Large Language Models via Ollama (e.g., `gemma3:27b`) to perform complex, semantics-preserving code transformations that go beyond simple pattern replacement.
+- **Intelligent Prompt Engineering**: Employs a  prompt templating system (`AI_PROMPT_TEMPLATE`) that instructs the LLM to maintain functional equivalence while diversifying code patterns, variable names, and mathematical expressions.
 - **Automated Test Suite Generation**: Analyzes the source code to automatically generate a suite of test cases (`test_cases.json`) and a Python-based test runner (`test_runner.py`) to rigorously validate the functional correctness of each generated variant.
 - **Performance & Metrics Logging**: Monitors the LLM's performance, tracking metrics like generation time, token usage, and success rates. This data is logged to both JSON and CSV files (`ai_generation_metrics.json`, `ai_generation_metrics.csv`) for analysis.
 
