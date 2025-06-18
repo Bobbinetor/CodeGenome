@@ -8,3 +8,6 @@ toml>=0.10.0
 pyfiglet>=0.8.0
 termcolor>=2.0.0
 metame>=0.4
+matplotlib>=3.5.0
+numpy>=1.21.0
+scikit-learn>=1.1.0
