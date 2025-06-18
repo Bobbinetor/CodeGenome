@@ -40,10 +40,11 @@ coverage/
 # Ignore dependency directories
 vendor/
 Pods/
-
+.claude/
 # Ignore Python virtual environment
 venv/
 .env/
+myenv/
 
 # Ignore CodeGenome generated files
 radar_comparison.png

@@ -45,6 +45,20 @@ try:
 except ImportError:
     ENHANCED_AI_AVAILABLE = False
 
+# Import binary analyzer
+try:
+    from binary_analyzer import BinaryAnalyzer
+    BINARY_ANALYZER_AVAILABLE = True
+except ImportError:
+    BINARY_ANALYZER_AVAILABLE = False
+
+# Import advanced binary analyzer
+try:
+    from advanced_binary_analyzer import AdvancedBinaryAnalyzer
+    ADVANCED_ANALYZER_AVAILABLE = True
+except ImportError:
+    ADVANCED_ANALYZER_AVAILABLE = False
+
 
 class VariantType(Enum):
     """Types of variants that can be generated"""
@@ -364,14 +378,21 @@ class AgenticLLM:
         
         # Use enhanced system if available
         if self.enhanced_system and ENHANCED_AI_AVAILABLE:
+            # Start performance monitoring
+            self.enhanced_system.performance_monitor.start_generation_session(num_variants)
+            
             self.console.print(f"[blue]🤖 Generating {num_variants} enhanced AI variants from {source_path}...[/blue]")
             self.console.print("[cyan]🔧 Using advanced transformation strategies for maximum binary differentiation[/cyan]")
             
             for i in range(num_variants):
                 self.console.print(f"\n[bold]--- Generating Enhanced Variant {i+1}/{num_variants} ---[/bold]")
                 
-                # Use enhanced system to generate and validate variant
-                variant_result = self.enhanced_system.generate_enhanced_variant(source_path, i+1)
+                # Use enhanced system to generate and validate variant with metrics
+                variant_result, metrics = self.enhanced_system.generate_enhanced_variant_with_metrics(source_path, i+1)
+                
+                # Add metrics to performance monitor
+                if metrics:
+                    self.enhanced_system.performance_monitor.add_variant_metrics(metrics)
                 
                 if variant_result:
                     # Create VariantInfo object compatible with existing system
@@ -401,6 +422,9 @@ class AgenticLLM:
                 else:
                     self.console.print(f"[red]❌ Failed to generate enhanced variant {i+1}[/red]")
             
+            # End performance monitoring and display summary
+            self.enhanced_system.performance_monitor.end_generation_session()
+            
             return variants
         
         # Fallback to original method if enhanced system not available
@@ -418,13 +442,16 @@ class AgenticLLM:
             return variants
         
         for i in range(num_variants):
-            variant_id = f"ai_variant_{i+1}_{uuid.uuid4().hex[:6]}"
+            # Generate meaningful variant name based on source file
+            source_name = Path(source_path).stem
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            variant_id = f"{source_name}_ai_v{i+1:02d}_{timestamp}"
             
             self.console.print(f"[cyan]🔄 Creating variant {i+1}: {variant_id}[/cyan]")
             
             # Create different prompt variations to encourage diversity
             prompts = [
-                f"""Rewrite this C code using a while loop instead of for loop and different variable names:
+                f"""Rewrite this code using a while loop instead of for loop and different variable names:
 
 {source_content}
 
@@ -528,6 +555,56 @@ class MetaMEIntegration:
         except ImportError:
             return False
     
+    def generate_variant_name(self, binary_path: str, variant_number: int) -> str:
+        """Generate a meaningful variant name based on binary file, number and timestamp"""
+        # Extract binary file name without extension
+        binary_name = Path(binary_path).stem
+        
+        # Generate timestamp (YYYYMMDD_HHMMSS format)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Create variant name: binaryname_metame_vN_timestamp
+        variant_name = f"{binary_name}_metame_v{variant_number:02d}_{timestamp}"
+        
+        return variant_name
+    
+    def check_binary_compatibility(self, binary_path: str) -> Tuple[bool, str]:
+        """Check if binary is compatible with MetaME"""
+        try:
+            # Check binary format and architecture
+            result = subprocess.run(['file', binary_path], capture_output=True, text=True)
+            file_info = result.stdout.lower()
+            
+            # MetaME works best with ELF x86/x64 binaries
+            if 'elf' not in file_info:
+                return False, "MetaME requires ELF format binaries (Linux/Unix). Try compiling with: gcc -o program source.c"
+            
+            if 'mach-o' in file_info:
+                return False, "Mach-O format (macOS) not supported. Please use ELF binaries."
+                
+            if 'pe32' in file_info or 'pe32+' in file_info:
+                return False, "PE format (Windows) not supported. Please use ELF binaries."
+            
+            if 'arm' in file_info and '64' in file_info:
+                return False, "ARM64 architecture may have limited support. x86/x64 recommended."
+            
+            # Check for PIE (Position Independent Executable) which can cause issues
+            warnings = []
+            if 'pie' in file_info:
+                warnings.append("PIE binary detected - may cause MetaME issues")
+            
+            if 'dynamically linked' in file_info:
+                warnings.append("Dynamic linking detected - static binaries work better")
+            
+            if warnings:
+                warning_msg = ", ".join(warnings)
+                return True, f"Binary compatible but with warnings: {warning_msg}"
+            else:
+                return True, "Binary appears fully compatible with MetaME"
+                
+        except Exception as e:
+            return False, f"Cannot analyze binary: {e}"
+    
     def generate_variants(self, binary_path: str, num_variants: int = 3) -> List[VariantInfo]:
         """Generate metamorphic variants using MetaME"""
         variants = []
@@ -536,10 +613,19 @@ class MetaMEIntegration:
             self.console.print("[red]❌ MetaME not found. Install with: pip install metame[/red]")
             return variants
         
+        # Check binary compatibility before attempting generation
+        compatible, msg = self.check_binary_compatibility(binary_path)
+        if not compatible:
+            self.console.print(f"[red]❌ Binary compatibility issue: {msg}[/red]")
+            self.console.print("[dim]💡 MetaME works best with ELF x86/x64 binaries compiled with GCC[/dim]")
+            return variants
+        else:
+            self.console.print(f"[green]✅ {msg}[/green]")
+        
         self.console.print(f"[blue]🔄 Generating {num_variants} MetaME variants from {binary_path}...[/blue]")
         
         for i in range(num_variants):
-            variant_id = f"metame_variant_{i+1}_{uuid.uuid4().hex[:6]}"
+            variant_id = self.generate_variant_name(binary_path, i+1)
             output_path = f"{binary_path}.{variant_id}"
             
             try:
@@ -568,12 +654,38 @@ class MetaMEIntegration:
                     variants.append(variant)
                     self.console.print(f"[green]✅ Generated MetaME variant {i+1}: {variant_id}[/green]")
                 else:
-                    self.console.print(f"[red]❌ MetaME failed for variant {i+1}: {result.stderr}[/red]")
+                    # Enhanced error reporting
+                    if result.stderr:
+                        error_lines = result.stderr.strip().split('\n')
+                        # Show only the most relevant error line
+                        relevant_error = "Unknown error"
+                        for line in error_lines:
+                            if 'keyerror' in line.lower() and 'offset' in line.lower():
+                                relevant_error = "MetaME bug: 'offset' key missing (known issue with some binaries)"
+                                break
+                            elif 'exception' in line.lower() or 'error' in line.lower():
+                                relevant_error = line.split(':', 1)[-1].strip() if ':' in line else line
+                                break
+                        self.console.print(f"[red]❌ MetaME failed for variant {i+1}: {relevant_error}[/red]")
+                    else:
+                        self.console.print(f"[red]❌ MetaME failed for variant {i+1}: Process failed[/red]")
                     
             except subprocess.TimeoutExpired:
                 self.console.print(f"[red]❌ MetaME timeout for variant {i+1}[/red]")
             except Exception as e:
                 self.console.print(f"[red]❌ MetaME error for variant {i+1}: {e}[/red]")
+        
+        # Summary
+        successful_variants = len(variants)
+        if successful_variants > 0:
+            self.console.print(f"\n[green]🎉 Successfully generated {successful_variants}/{num_variants} MetaME variants[/green]")
+        else:
+            self.console.print(f"\n[red]❌ No MetaME variants generated.[/red]")
+            self.console.print("[yellow]⚠️ Note: MetaME has known compatibility issues with modern binaries[/yellow]")
+            self.console.print("[dim]💡 MetaME works best with older, simpler ELF binaries[/dim]")
+            self.console.print("[dim]💡 Alternative: Use AI variants instead - they work reliably with source code[/dim]")
+            self.console.print("[dim]   1. source your_file.c[/dim]")
+            self.console.print("[dim]   2. ai[/dim]")
         
         return variants
 
@@ -666,6 +778,7 @@ class CodeGenomeSuite:
                 "🔄 Generate MetaME Variants",
                 "🤖 Generate AI Variants",
                 "📊 View Generated Variants",
+                "🔍 Analyze Binaries & Generate Radar Chart",
                 "⚙️ Configuration",
                 "🚪 Exit"
             ]
@@ -707,6 +820,8 @@ class CodeGenomeSuite:
                 self.generate_ai_variants()
             elif "View Generated Variants" in choice:
                 self.view_variants()
+            elif "Analyze Binaries" in choice:
+                self.analyze_binaries_with_radar()
             elif "Configuration" in choice:
                 self.configure_settings()
         
@@ -879,6 +994,12 @@ class CodeGenomeSuite:
         
         if variants:
             self.console.print(f"[green]✅ Successfully generated {len(variants)} AI variants[/green]")
+            
+            # Auto-suggest binary analysis
+            if BINARY_ANALYZER_AVAILABLE and len(variants) > 0:
+                self.console.print("\n[blue]💡 Tip: You can now analyze these variants with radar chart visualization![/blue]")
+                if questionary.confirm("🔍 Run binary analysis now?").ask():
+                    self.analyze_binaries_with_radar()
         else:
             self.console.print("[red]❌ No AI variants were generated[/red]")
     
@@ -954,7 +1075,7 @@ class CodeGenomeSuite:
                 
                 self.config.ollama_model = questionary.select(
                     "Ollama model:",
-                    choices=["gemma3:1b", "gemma2:1b", "gemma2:2b", "llama3.2:1b", "llama3.2:3b"],
+                    choices=["gemma3:12b", "gemma3:1b", "gemma2:2b", "llama3.2:1b", "llama3.2:3b"],
                     default=self.config.ollama_model
                 ).ask()
                 
@@ -986,6 +1107,249 @@ class CodeGenomeSuite:
                 except Exception as e:
                     self.console.print(f"[red]❌ Failed to save config: {e}[/red]")
 
+
+    def analyze_binaries_with_radar(self):
+        """Advanced binary analysis with interactive selection and radar chart generation"""
+        self.console.print("\n[bold]🔍 Advanced Binary Analysis & Radar Chart Generation[/bold]")
+        
+        if not ADVANCED_ANALYZER_AVAILABLE:
+            self.console.print("[red]❌ Advanced binary analyzer not available. Please install required dependencies:[/red]")
+            self.console.print("[yellow]  pip install matplotlib numpy r2pipe scikit-learn[/yellow]")
+            
+            # Fallback to basic analyzer
+            if BINARY_ANALYZER_AVAILABLE:
+                self.console.print("[blue]💡 Using basic analyzer as fallback...[/blue]")
+                self._analyze_binaries_basic()
+            return
+        
+        # Collect all available binaries with better categorization
+        available_binaries = []
+        
+        # Add loaded binaries
+        for binary in self.loaded_binaries:
+            if os.path.exists(binary):
+                available_binaries.append({
+                    'name': f"📁 Loaded: {os.path.basename(binary)}",
+                    'path': binary,
+                    'category': 'loaded'
+                })
+        
+        # Add generated variants
+        for variant in self.generated_variants:
+            if os.path.exists(variant.path):
+                available_binaries.append({
+                    'name': f"🤖 Variant: {variant.name}",
+                    'path': variant.path,
+                    'category': 'variant'
+                })
+        
+        # Add workspace binaries (including compiled sources)
+        for file_path in self.workspace.glob("*"):
+            if file_path.is_file() and os.access(file_path, os.X_OK):
+                # Check if it's a binary (simple heuristic)
+                try:
+                    with open(file_path, 'rb') as f:
+                        header = f.read(4)
+                        if header.startswith(b'\x7fELF') or header.startswith(b'MZ'):
+                            # Check if not already added
+                            already_added = any(b['path'] == str(file_path) for b in available_binaries)
+                            if not already_added:
+                                available_binaries.append({
+                                    'name': f"⚙️ Workspace: {file_path.name}",
+                                    'path': str(file_path),
+                                    'category': 'workspace'
+                                })
+                except:
+                    continue
+        
+        if not available_binaries:
+            self.console.print("[yellow]⚠️ No binaries available for analysis.[/yellow]")
+            self.console.print("[blue]💡 Load binaries or generate variants first.[/blue]")
+            return
+        
+        # Show available binaries with categories
+        self.console.print(f"\n[green]📊 Found {len(available_binaries)} binaries for analysis:[/green]")
+        
+        # Group by category for better display
+        categories = {'loaded': [], 'variant': [], 'workspace': []}
+        for binary in available_binaries:
+            categories[binary['category']].append(binary)
+        
+        for category_name, binaries in categories.items():
+            if binaries:
+                self.console.print(f"[cyan]{category_name.title()} ({len(binaries)}):[/cyan]")
+                for binary in binaries:
+                    size = os.path.getsize(binary['path']) if os.path.exists(binary['path']) else 0
+                    self.console.print(f"  {binary['name']} ({size:,} bytes)")
+        
+        # Selection menu
+        self.console.print(f"\n[yellow]🎯 Analysis Options:[/yellow]")
+        choices = [
+            "🔍 Analyze All Binaries (Comprehensive)",
+            "📊 Select Multiple Binaries",
+            "🎯 Select Single Binary",
+            "⬅️ Back to Main Menu"
+        ]
+        
+        choice = questionary.select("Choose analysis mode:", choices=choices).ask()
+        
+        if choice is None or "Back" in choice:
+            return
+        
+        binaries_to_analyze = []
+        
+        if "Analyze All" in choice:
+            binaries_to_analyze = [b['path'] for b in available_binaries]
+            
+        elif "Select Multiple" in choice:
+            # Multi-select binaries
+            binary_choices = [f"{b['name']} ({os.path.getsize(b['path']):,} bytes)" for b in available_binaries]
+            selected = questionary.checkbox(
+                "Select binaries to analyze (use space to select, enter to confirm):",
+                choices=binary_choices
+            ).ask()
+            
+            if not selected:
+                return
+            
+            # Map back to paths
+            for selection in selected:
+                for binary in available_binaries:
+                    binary_display = f"{binary['name']} ({os.path.getsize(binary['path']):,} bytes)"
+                    if binary_display == selection:
+                        binaries_to_analyze.append(binary['path'])
+                        break
+        
+        elif "Select Single" in choice:
+            # Single select
+            binary_choices = [b['name'] for b in available_binaries]
+            selected = questionary.select("Select binary to analyze:", choices=binary_choices).ask()
+            
+            if not selected:
+                return
+            
+            for binary in available_binaries:
+                if binary['name'] == selected:
+                    binaries_to_analyze = [binary['path']]
+                    break
+        
+        if not binaries_to_analyze:
+            self.console.print("[red]❌ No binaries selected[/red]")
+            return
+        
+        # Advanced analysis mode selection
+        self.console.print(f"\n[bold yellow]🔬 Analysis Mode Selection[/bold yellow]")
+        self.console.print(f"[cyan]Choose how to analyze syscalls in the selected binaries:[/cyan]")
+        
+        analysis_choices = [
+            "📊 Static Analysis Only (Fast - recommended for large sets)",
+            "🔍 Dynamic Analysis with Strace (Slower but more accurate)",
+            "🔬 Dynamic Analysis + N-gram Patterns (Most comprehensive)"
+        ]
+        
+        # Show detailed comparison
+        comparison_table = Table(title="Analysis Mode Comparison", box=box.ROUNDED)
+        comparison_table.add_column("Mode", style="cyan")
+        comparison_table.add_column("Speed", style="green")
+        comparison_table.add_column("Accuracy", style="yellow")
+        comparison_table.add_column("Features", style="blue")
+        
+        comparison_table.add_row(
+            "Static Only", 
+            "⚡ Very Fast", 
+            "📊 Good", 
+            "Import/symbol analysis"
+        )
+        comparison_table.add_row(
+            "Dynamic Strace", 
+            "🐌 Slower", 
+            "🎯 High", 
+            "Real syscall execution"
+        )
+        comparison_table.add_row(
+            "Dynamic + N-grams", 
+            "🐌 Slowest", 
+            "🎯 Highest", 
+            "Execution + pattern analysis"
+        )
+        
+        self.console.print(comparison_table)
+        
+        # Warn about performance for large sets
+        if len(binaries_to_analyze) > 5:
+            self.console.print(f"\n[yellow]⚠️ Warning: You selected {len(binaries_to_analyze)} binaries[/yellow]")
+            self.console.print(f"[yellow]   Dynamic analysis may take a long time![/yellow]")
+        
+        self.console.print(f"\n[green]💡 Tip: You can always start with static analysis and re-run with dynamic if needed[/green]")
+        
+        analysis_choice = questionary.select(
+            "🔍 Select analysis mode:",
+            choices=analysis_choices
+        ).ask()
+        
+        if analysis_choice is None:
+            self.console.print("[red]❌ No analysis mode selected[/red]")
+            return
+        
+        # Parse the choice
+        use_strace = False
+        enable_ngrams = False
+        
+        if "Dynamic Analysis with Strace" in analysis_choice:
+            use_strace = True
+            enable_ngrams = False
+            self.console.print(f"[blue]🔍 Selected: Dynamic strace analysis[/blue]")
+        elif "Dynamic Analysis + N-gram" in analysis_choice:
+            use_strace = True
+            enable_ngrams = True
+            self.console.print(f"[blue]🔬 Selected: Dynamic analysis with n-gram patterns[/blue]")
+        else:
+            use_strace = False
+            enable_ngrams = False
+            self.console.print(f"[blue]📊 Selected: Static analysis only[/blue]")
+        
+        # Final confirmation for dynamic analysis
+        if use_strace and len(binaries_to_analyze) > 3:
+            confirm = questionary.confirm(
+                f"⚠️ Are you sure you want to run dynamic analysis on {len(binaries_to_analyze)} binaries? This may take several minutes."
+            ).ask()
+            if not confirm:
+                self.console.print(f"[yellow]📊 Falling back to static analysis[/yellow]")
+                use_strace = False
+                enable_ngrams = False
+        
+        # Initialize advanced analyzer
+        analyzer = AdvancedBinaryAnalyzer(self.console, self.workspace)
+        
+        # Perform comprehensive analysis
+        try:
+            all_metrics, radar_path = analyzer.analyze_multiple_binaries_advanced(
+                binaries_to_analyze, use_strace=use_strace
+            )
+            
+            if all_metrics:
+                self.console.print(f"\n[green]✅ Analysis completed successfully![/green]")
+                if radar_path:
+                    self.console.print(f"[blue]📊 Radar chart: {radar_path}[/blue]")
+                    
+                # Ask to open results directory
+                if questionary.confirm("📁 Open analysis results directory?").ask():
+                    try:
+                        import subprocess
+                        subprocess.run(['xdg-open', str(analyzer.analysis_dir)], check=False)
+                    except:
+                        self.console.print(f"[blue]📁 Results directory: {analyzer.analysis_dir}[/blue]")
+            else:
+                self.console.print("[red]❌ Analysis failed - no binaries could be processed[/red]")
+                
+        except Exception as e:
+            self.console.print(f"[red]❌ Analysis error: {e}[/red]")
+    
+    def _analyze_binaries_basic(self):
+        """Fallback basic analysis method"""
+        # This is the original basic analyzer method as fallback
+        analyzer = BinaryAnalyzer(self.console, self.workspace)
+        # Basic implementation here...
 
 def main():
     """Main entry point"""

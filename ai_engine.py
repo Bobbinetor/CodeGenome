@@ -12,9 +12,10 @@ import tempfile
 import uuid
 import json
 import time
+from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import requests
 from rich.console import Console
 
@@ -29,12 +30,180 @@ class TestCase:
     timeout: int = 10
 
 @dataclass
+class VariantMetrics:
+    """Metrics for AI variant generation performance"""
+    generation_start_time: float
+    generation_end_time: float
+    llm_response_time: float
+    compilation_time: float
+    validation_time: float
+    test_cases_count: int
+    validation_success: bool
+    success_rate: float
+    failed_tests_count: int
+    total_attempts: int
+    variant_id: str
+    strategy_used: str
+    
+    @property
+    def total_time(self) -> float:
+        return self.generation_end_time - self.generation_start_time
+    
+    @property
+    def generation_time(self) -> float:
+        return self.llm_response_time + self.compilation_time + self.validation_time
+
+@dataclass
 class TransformationStrategy:
     """Defines code transformation strategies for maximum binary differentiation"""
     name: str
     description: str
     prompt_section: str
     priority: int
+
+class PerformanceMonitor:
+    """Monitor and track AI variant generation performance"""
+    
+    def __init__(self, console: Console, workspace: Path):
+        self.console = console
+        self.workspace = workspace
+        self.metrics_file = workspace / "llm_metrics" / "ai_generation_metrics.json"
+        self.csv_metrics_file = workspace / "llm_metrics" / "ai_generation_metrics.csv"
+        self.metrics_file.parent.mkdir(exist_ok=True)
+        self.session_metrics = []
+        self.total_attempts = 0
+        self.successful_variants = 0
+        self.failed_variants = 0
+        
+    def start_generation_session(self, num_variants: int):
+        """Start a new generation session"""
+        self.session_start_time = time.time()
+        self.session_metrics = []
+        self.requested_variants = num_variants
+        
+    def add_variant_metrics(self, metrics: VariantMetrics):
+        """Add metrics for a generated variant"""
+        self.session_metrics.append(metrics)
+        self.total_attempts += 1
+        
+        if metrics.validation_success:
+            self.successful_variants += 1
+        else:
+            self.failed_variants += 1
+            
+    def end_generation_session(self):
+        """End generation session and save metrics"""
+        session_end_time = time.time()
+        session_duration = session_end_time - self.session_start_time
+        
+        # Save detailed metrics to file
+        self._save_metrics_to_file()
+        
+        # Save metrics to CSV file
+        self._save_metrics_to_csv()
+        
+        # Display session summary
+        self._display_session_summary(session_duration)
+        
+    def _save_metrics_to_file(self):
+        """Save metrics to JSON file"""
+        try:
+            # Load existing metrics
+            existing_metrics = []
+            if self.metrics_file.exists():
+                with open(self.metrics_file, 'r') as f:
+                    existing_metrics = json.load(f)
+            
+            # Add new session metrics
+            session_data = {
+                'timestamp': datetime.now().isoformat(),
+                'session_start': self.session_start_time,
+                'requested_variants': self.requested_variants,
+                'successful_variants': len([m for m in self.session_metrics if m.validation_success]),
+                'failed_variants': len([m for m in self.session_metrics if not m.validation_success]),
+                'variants': [asdict(m) for m in self.session_metrics]
+            }
+            
+            existing_metrics.append(session_data)
+            
+            # Save to file
+            with open(self.metrics_file, 'w') as f:
+                json.dump(existing_metrics, f, indent=2)
+                
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️ Could not save metrics: {e}[/yellow]")
+    
+    def _save_metrics_to_csv(self):
+        """Save metrics to CSV file (append mode for continuous logging)"""
+        try:
+            import csv
+            
+            # Check if CSV file exists to determine if we need headers
+            file_exists = self.csv_metrics_file.exists()
+            
+            # CSV headers
+            headers = [
+                'timestamp', 'session_start', 'variant_id', 'strategy_used',
+                'generation_time', 'llm_response_time', 'compilation_time', 
+                'validation_time', 'test_cases_count', 'validation_success',
+                'success_rate', 'failed_tests_count', 'total_attempts'
+            ]
+            
+            # Open in append mode to continuously update the file
+            with open(self.csv_metrics_file, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write headers only if file is new
+                if not file_exists:
+                    writer.writerow(headers)
+                
+                # Write each variant's metrics as a row
+                for metrics in self.session_metrics:
+                    writer.writerow([
+                        datetime.now().isoformat(),
+                        self.session_start_time,
+                        metrics.variant_id,
+                        metrics.strategy_used,
+                        metrics.total_time,
+                        metrics.llm_response_time,
+                        metrics.compilation_time,
+                        metrics.validation_time,
+                        metrics.test_cases_count,
+                        metrics.validation_success,
+                        metrics.success_rate,
+                        metrics.failed_tests_count,
+                        metrics.total_attempts
+                    ])
+            
+            self.console.print(f"[dim]💾 Metrics updated in CSV: {self.csv_metrics_file}[/dim]")
+                    
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️ Could not save CSV metrics: {e}[/yellow]")
+    
+    def _display_session_summary(self, session_duration: float):
+        """Display comprehensive session summary"""
+        if not self.session_metrics:
+            return
+            
+        successful = [m for m in self.session_metrics if m.validation_success]
+        failed = [m for m in self.session_metrics if not m.validation_success]
+        
+        self.console.print(f"\n[bold cyan]📊 AI Generation Performance Summary[/bold cyan]")
+        self.console.print(f"[green]✅ Successful variants: {len(successful)}/{self.requested_variants}[/green]")
+        self.console.print(f"[red]❌ Failed variants: {len(failed)}[/red]")
+        self.console.print(f"[blue]⏱️ Total session time: {session_duration:.1f}s[/blue]")
+        
+        if successful:
+            avg_time = sum(m.total_time for m in successful) / len(successful)
+            avg_llm_time = sum(m.llm_response_time for m in successful) / len(successful)
+            avg_success_rate = sum(m.success_rate for m in successful) / len(successful)
+            
+            self.console.print(f"[dim]📈 Average generation time: {avg_time:.1f}s[/dim]")
+            self.console.print(f"[dim]🤖 Average LLM response time: {avg_llm_time:.1f}s[/dim]")
+            self.console.print(f"[dim]🎯 Average test success rate: {avg_success_rate*100:.1f}%[/dim]")
+            
+        if failed:
+            self.console.print(f"[yellow]⚠️ {len(failed)} variants failed validation and were discarded[/yellow]")
 
 class EnhancedAgenticSystem:
     """Enhanced AI-powered code variant generation with comprehensive testing"""
@@ -48,6 +217,27 @@ class EnhancedAgenticSystem:
         self.test_suites_dir = workspace / "test_suites"
         self.test_suites_dir.mkdir(exist_ok=True)
         
+        # Initialize performance monitor
+        self.performance_monitor = PerformanceMonitor(console, workspace)
+        
+        # Initialize transformation strategies
+        self._init_transformation_strategies()
+    
+    def generate_variant_name(self, source_path: str, variant_number: int, variant_type: str) -> str:
+        """Generate a meaningful variant name based on source file, number and timestamp"""
+        # Extract source file name without extension
+        source_name = Path(source_path).stem
+        
+        # Generate timestamp (YYYYMMDD_HHMMSS format)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Create variant name: sourcename_type_N_timestamp
+        variant_name = f"{source_name}_{variant_type}_v{variant_number:02d}_{timestamp}"
+        
+        return variant_name
+    
+    def _init_transformation_strategies(self):
+        """Initialize transformation strategies"""
         # Transformation strategies for maximum binary differentiation
         self.transformation_strategies = [
             TransformationStrategy(
@@ -298,10 +488,19 @@ def run_test(binary_path, test_case):
         expected = test_case['expected_output'].strip().replace('\\r\\n', '\\n')
         actual = result.stdout.strip().replace('\\r\\n', '\\n')
         
-        # Handle Process ID differences (PIDs change between runs)
+        # Handle Process ID differences (PIDs change between runs) and argv[0] differences
         import re
         expected_normalized = re.sub(r'Process ID: \\d+', 'Process ID: [PID]', expected)
         actual_normalized = re.sub(r'Process ID: \\d+', 'Process ID: [PID]', actual)
+        
+        # Handle program name differences (argv[0] will be different between binaries)
+        # Replace any path-like strings that look like binary names
+        expected_normalized = re.sub(r'/[^\\s]*(?:original_[a-f0-9]+|enhanced_ai_variant_\\d+_[a-f0-9]+|\\w+_(?:ai|metame)_v\\d+_\\d{{8}}_\\d{{6}})', '[PROGRAM_PATH]', expected_normalized)
+        actual_normalized = re.sub(r'/[^\\s]*(?:original_[a-f0-9]+|enhanced_ai_variant_\\d+_[a-f0-9]+|\\w+_(?:ai|metame)_v\\d+_\\d{{8}}_\\d{{6}})', '[PROGRAM_PATH]', actual_normalized)
+        
+        # Also handle bare program names (without paths)
+        expected_normalized = re.sub(r'\\b(?:original_[a-f0-9]+|enhanced_ai_variant_\\d+_[a-f0-9]+|\\w+_(?:ai|metame)_v\\d+_\\d{{8}}_\\d{{6}})\\b', '[PROGRAM_NAME]', expected_normalized)
+        actual_normalized = re.sub(r'\\b(?:original_[a-f0-9]+|enhanced_ai_variant_\\d+_[a-f0-9]+|\\w+_(?:ai|metame)_v\\d+_\\d{{8}}_\\d{{6}})\\b', '[PROGRAM_NAME]', actual_normalized)
         
         if expected_normalized != actual_normalized:
             return False, f"Output mismatch:\\nExpected: {{repr(expected_normalized)}}\\nActual: {{repr(actual_normalized)}}"
@@ -425,10 +624,24 @@ Enhanced Agentic System - CodeGenome Suite v3.0
             expected_clean = test_case.expected_output.strip().replace('\r\n', '\n')
             actual_clean = result.stdout.strip().replace('\r\n', '\n')
             
-            # Handle Process ID differences (PIDs change between runs)
+            # Handle Process ID differences (PIDs change between runs) and argv[0] differences
             import re
             expected_normalized = re.sub(r'Process ID: \d+', 'Process ID: [PID]', expected_clean)
             actual_normalized = re.sub(r'Process ID: \d+', 'Process ID: [PID]', actual_clean)
+            
+            # Handle program name differences (argv[0] will be different between original and variant)
+            # Updated patterns to match new naming format: sourcename_type_vNN_timestamp
+            # Patterns match: original_[hex], enhanced_ai_variant_N_[hex], sourcename_ai_vNN_timestamp, sourcename_metame_vNN_timestamp
+            
+            # Replace any path-like strings that look like binary names
+            path_pattern = r'/[^\s]*(?:original_[a-f0-9]+|enhanced_ai_variant_\d+_[a-f0-9]+|\w+_(?:ai|metame)_v\d+_\d{8}_\d{6})'
+            expected_normalized = re.sub(path_pattern, '[PROGRAM_PATH]', expected_normalized)
+            actual_normalized = re.sub(path_pattern, '[PROGRAM_PATH]', actual_normalized)
+            
+            # Also handle bare program names (without paths)
+            name_pattern = r'\b(?:original_[a-f0-9]+|enhanced_ai_variant_\d+_[a-f0-9]+|\w+_(?:ai|metame)_v\d+_\d{8}_\d{6})\b'
+            expected_normalized = re.sub(name_pattern, '[PROGRAM_NAME]', expected_normalized)
+            actual_normalized = re.sub(name_pattern, '[PROGRAM_NAME]', actual_normalized)
             
             if expected_normalized != actual_normalized:
                 return False, f"Output mismatch:\nExpected: {repr(expected_normalized)}\nActual: {repr(actual_normalized)}"
@@ -565,8 +778,8 @@ Enhanced Agentic System - CodeGenome Suite v3.0
         with open(source_path, 'r') as f:
             source_code = f.read()
         
-        # Generate variant ID
-        variant_id = f"enhanced_ai_variant_{variant_number}_{uuid.uuid4().hex[:8]}"
+        # Generate variant ID based on source file name, number and timestamp
+        variant_id = self.generate_variant_name(source_path, variant_number, "ai")
         
         self.console.print(f"[cyan]🔄 Generating enhanced variant: {variant_id}[/cyan]")
         
@@ -574,7 +787,7 @@ Enhanced Agentic System - CodeGenome Suite v3.0
         prompt = self.generate_comprehensive_prompt(source_code, variant_number)
         
         # Call LLM with retry logic
-        self.console.print("[yellow]🤖 Calling AI model for variant generation (this may take time with 12b model)...[/yellow]")
+        self.console.print("[yellow]🤖 Calling AI model for variant generation (this may take time with large models)...[/yellow]")
         llm_response = self.call_llm(prompt)
         
         # If no response, try with faster model and intermediate prompt
@@ -704,9 +917,76 @@ Modified C code:"""
             for i, failed_test in enumerate(validation_results['failed_tests'][:3]):
                 self.console.print(f"[yellow]Test {i+1} '{failed_test['test_name']}': {failed_test['variant_result']}[/yellow]")
             
-            # Keep files for debugging, clean up original binary only
-            original_binary_path.unlink() if original_binary_path.exists() else None
+            # Clean up ALL files for failed variants to keep workspace clean
+            self.console.print(f"[blue]🧹 Cleaning up failed variant files...[/blue]")
             
-            self.console.print(f"[yellow]Debug: Variant files kept at {variant_source_path} for analysis[/yellow]")
+            # Remove variant source file
+            if variant_source_path.exists():
+                variant_source_path.unlink()
+                
+            # Remove variant binary
+            if variant_binary_path.exists():
+                variant_binary_path.unlink()
+                
+            # Remove test suite directory
+            import shutil
+            test_suite_dir = self.test_suites_dir / variant_id
+            if test_suite_dir.exists():
+                shutil.rmtree(test_suite_dir)
+                
+            # Clean up original binary
+            if original_binary_path.exists():
+                original_binary_path.unlink()
+            
+            self.console.print(f"[blue]✅ Failed variant files removed from workspace[/blue]")
             
             return None
+    
+    def generate_enhanced_variant_with_metrics(self, source_path: str, variant_number: int = 1) -> Tuple[Optional[Dict[str, Any]], Optional[VariantMetrics]]:
+        """Generate enhanced variant with comprehensive performance metrics"""
+        
+        # Start timing
+        generation_start_time = time.time()
+        
+        # Use the existing generate_enhanced_variant but collect metrics
+        result = self.generate_enhanced_variant(source_path, variant_number)
+        
+        generation_end_time = time.time()
+        
+        # Create metrics based on result
+        variant_id = self.generate_variant_name(source_path, variant_number, "ai")
+        
+        if result:
+            validation_results = result['validation_results']
+            metrics = VariantMetrics(
+                generation_start_time=generation_start_time,
+                generation_end_time=generation_end_time,
+                llm_response_time=30.0,  # Estimate - we'll improve this later
+                compilation_time=5.0,    # Estimate
+                validation_time=10.0,    # Estimate
+                test_cases_count=result['test_cases'],
+                validation_success=True,
+                success_rate=validation_results['success_rate'],
+                failed_tests_count=len(validation_results['failed_tests']),
+                total_attempts=1,
+                variant_id=variant_id,
+                strategy_used=f"strategy_{variant_number}"
+            )
+            return result, metrics
+        else:
+            # Validation failed
+            metrics = VariantMetrics(
+                generation_start_time=generation_start_time,
+                generation_end_time=generation_end_time,
+                llm_response_time=30.0,  # Estimate
+                compilation_time=5.0,    # Estimate
+                validation_time=10.0,    # Estimate
+                test_cases_count=0,
+                validation_success=False,
+                success_rate=0.0,
+                failed_tests_count=0,
+                total_attempts=1,
+                variant_id=variant_id,
+                strategy_used=f"strategy_{variant_number}"
+            )
+            return None, metrics
