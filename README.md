@@ -6,39 +6,50 @@
 
 CodeGenome is a sophisticated system that generates functionally equivalent C code variants with different binary signatures. Using advanced AI transformation strategies and metamorphic techniques, it creates diverse program variants while maintaining identical functionality, making it invaluable for binary analysis research, reverse engineering studies, and software testing scenarios.
 
+## 📚 Table of Contents
+
+- [✨ Features](#-features)
+- [🏗️ Architecture](#️-architecture)
+- [🔑 Key Files](#-key-files)
+- [🚀 Getting Started](#-getting-started)
+- [🔧 Configuration](#-configuration)
+- [📖 Workflow Examples](#-workflow-examples)
+- [📁 Output Structure](#-output-structure)
+- [🔧 Advanced Configuration](#-advanced-configuration)
+- [🎯 Use Cases](#-use-cases)
+- [🤝 Contributing](#-contributing)
+- [📜 Citation](#-citation)
+- [📄 License](#-license)
+- [🙏 Acknowledgments](#-acknowledgments)
+
 ## ✨ Features
 
 ### 🤖 AI-Powered Variant Generation
-- **6 Advanced Transformation Strategies** targeting maximum binary differentiation
-- **LLM-based code transformations** using Ollama with models like gemma3:12b/27b
-- **Intelligent prompt engineering** for consistent, high-quality variants
-- **Comprehensive test suite generation** with automatic validation
-- **Performance monitoring** with detailed metrics and CSV logging
+- **Advanced Transformation Strategies**: Leverages six distinct, AI-driven strategies to maximize binary differentiation. These strategies include altering control flow (e.g., converting `for` loops to `while` loops), data types (e.g., `int` to `long`), and algorithmic structure (e.g., iterative to recursive).
+- **LLM-Based Code Restructuring**: Utilizes Large Language Models via Ollama (e.g., `gemma3:12b`) to perform complex, semantics-preserving code transformations that go beyond simple pattern replacement.
+- **Intelligent Prompt Engineering**: Employs a sophisticated prompt templating system (`AI_PROMPT_TEMPLATE`) that instructs the LLM to maintain functional equivalence while diversifying code patterns, variable names, and mathematical expressions.
+- **Automated Test Suite Generation**: Analyzes the source code to automatically generate a suite of test cases (`test_cases.json`) and a Python-based test runner (`test_runner.py`) to rigorously validate the functional correctness of each generated variant.
+- **Performance & Metrics Logging**: Monitors the LLM's performance, tracking metrics like generation time, token usage, and success rates. This data is logged to both JSON and CSV files (`ai_generation_metrics.json`, `ai_generation_metrics.csv`) for analysis.
 
 ### 📊 Advanced Binary Analysis
-- **Multi-tool analysis** using radare2, strace, and static analysis
-- **Radar chart visualizations** for multi-binary comparison
-- **Syscall pattern analysis** with n-gram detection
-- **Distance matrices** (Euclidean and Cosine similarity)
-- **Interactive binary selection** with smart categorization
+- **Multi-Tool Static & Dynamic Analysis**: Integrates `radare2` for deep static analysis of binary properties (e.g., function size, cyclomatic complexity, entropy) and `strace` for dynamic analysis of system call patterns during execution.
+- **Comparative Radar Chart Visualizations**: Generates intuitive radar charts to visually compare key metrics across multiple binaries, providing a clear overview of their structural and behavioral differences.
+- **System Call Pattern Analysis**: Captures and analyzes syscall sequences using n-gram modeling to identify unique behavioral fingerprints, which are crucial for detecting subtle functional deviations.
+- **Feature-Based Distance Matrices**: Calculates and exports Euclidean and Cosine similarity matrices based on a vector of binary features, offering a quantitative measure of how "different" the variants are from each other.
+- **Interactive Binary Management**: Provides a CLI-based interface for selecting, grouping, and managing binaries for analysis, with smart categorization based on their origin (AI-generated, MetaME-transformed, or original).
 
 ### 🔬 MetaME Integration
-- **Metamorphic binary transformations** for compiled executables
-- **Semantic-preserving transformations** with configurable passes
-- **Binary-level variant generation** complementing AI source transformations
+- **Metamorphic Binary Transformation**: Directly manipulates compiled executables using the MetaME engine to apply a series of semantic-preserving transformations at the binary level.
+- **Configurable Transformation Passes**: Allows for the configuration of specific transformation passes within MetaME, such as instruction substitution, register reassignment, and code transposition, to complement the source-level changes made by the AI.
 
 ### 🖥️ Modern CLI Interface
-- **Tab completion** with intelligent path suggestions
-- **Auto-detection** of source files vs. binary files
-- **Status indicators** and real-time feedback
-- **Natural terminal scrolling** with rich formatting
-- **Unified workflow** supporting mixed file types
+- **Unified & Interactive Workflow**: A single, powerful CLI (`codegenome_cli.py`) manages the entire workflow, from loading source/binary files to generation, analysis, and results visualization.
+- **Intelligent Path Completion**: Features shell-like tab completion for file paths and commands, significantly speeding up user interaction.
+- **Real-Time Status Feedback**: Uses rich formatting and status indicators to provide clear, real-time feedback on ongoing processes like AI generation or binary analysis.
 
 ### ✅ Validation & Testing
-- **Automated test case generation** from source analysis
-- **Functional equivalence verification** with detailed reporting
-- **Standalone test runners** for each generated variant
-- **Cross-platform compatibility** handling
+- **Automated Functional Equivalence Verification**: For each generated variant, the system compiles the code and runs the auto-generated test suite against it, comparing the output against the original program's output to ensure correctness.
+- **Standalone Test Runners**: Each test suite is self-contained and includes a dedicated runner, allowing for easy, independent verification or manual testing of any variant outside the CodeGenome suite.
 
 ## 🏗️ Architecture
 
@@ -95,38 +106,29 @@ CodeGenome Suite Architecture:
 
 ## 🚀 Getting Started
 
+This guide will walk you through setting up the CodeGenome Suite and running it for the first time.
+
 ### Prerequisites
 
 #### System Requirements
+Ensure you have the essential development tools installed.
+
 ```bash
-# Ubuntu/Debian
+# For Ubuntu/Debian-based systems
 sudo apt update
 sudo apt install build-essential gcc git python3 python3-pip
 ```
 
 #### Python Dependencies
+Install the required Python packages using pip.
+
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Ollama Setup (Required for AI generation)
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
+### For Making MetaME Work (Optional)
 
-# Pull the recommended model
-ollama pull gemma3:12b
-
-# Or for faster generation (smaller model)
-ollama pull gemma3:1b
-
-# Start Ollama service (if not auto-started)
-ollama serve
-```
-
-### For Making MetaME Work
-
-MetaME requires a specific version of radare2 for optimal compatibility. Here's how to install the exact version:
+MetaME enables binary-level transformations and requires a specific version of `radare2`. If you don't need this feature, you can skip this step.
 
 #### Prerequisites for radare2
 ```bash
@@ -141,51 +143,58 @@ sudo apt install libc6-dev-i386 gcc-multilib g++-multilib
 
 #### Install Specific radare2 Version
 ```bash
-# Clone radare2 repository
-rm -rf radare2  # Remove existing if present
+# Clone, checkout the specific commit, and install
 git clone https://github.com/radareorg/radare2.git
 cd radare2
-
-# Checkout the exact commit needed for MetaME compatibility
 git checkout 41dc7e6db6932ebca90a9bc66ee58ee845880fee
-
-# Install radare2
 sudo sys/install.sh
+cd ..
 ```
+This specific commit (`41dc7e6db6932ebca90a9bc66ee58ee845880fee`) is crucial for MetaME compatibility.
 
-This specific commit (`41dc7e6db6932ebca90a9bc66ee58ee845880fee`) corresponds to radare2 version 5.9.9 build 33338, which is required for MetaME to function correctly.
+### Getting Started: First Run
 
-### Basic Usage
+#### 1. Setup Ollama & Pull AI Model
+CodeGenome uses Ollama to run the AI models locally. First, install Ollama and ensure the service is running.
 
-#### 1. Start the CLI
+```bash
+# Install Ollama (if you haven't already)
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Start the Ollama service in the background
+ollama serve &
+
+# Pull the recommended model for a balance of performance and quality
+ollama pull gemma3:12b
+```
+For faster generation on less powerful hardware, you can pull a smaller model (`ollama pull gemma3:1b`), but be sure to update the `LLM_MODEL` in `config.py`.
+
+#### 2. Launch the CodeGenome CLI
+With the prerequisites installed and the AI model ready, you can now start the application.
+
 ```bash
 python3 codegenome_cli.py
 ```
 
-#### 2. Load Source Files
+You will be greeted by the CodeGenome prompt (`CodeGenome ❯`).
+
+#### 3. Your First Generation & Analysis
+From the CLI, you can load a source file, generate AI variants, and analyze the results.
+
 ```bash
+# Load a sample C source file
 CodeGenome ❯ load source_code/hello_world.c
-```
 
-#### 3. Generate AI Variants
-```bash
+# Generate 2 AI variants from the loaded file
 CodeGenome [📄1] ❯ ai
-# Follow prompts to generate variants
-```
+Number of AI variants to generate: 2
 
-#### 4. Analyze Generated Binaries
-```bash
+# Analyze the generated binaries to see how they differ
 CodeGenome [📄1 🤖2] ❯ analyze
-# Select binaries for comparison and analysis
 ```
+The suite will guide you through selecting binaries for analysis and will output the results in the `workspace/analysis_results/` directory.
 
-#### 5. View Results
-```bash
-CodeGenome ❯ variants
-# Lists all generated variants with details
-```
-
-### Configuration
+## 🔧 Configuration
 
 Configuration is managed in the `config.py` file, which is designed to be simple and easy to modify. Below is a breakdown of the key sections and settings you can customize.
 
@@ -365,19 +374,19 @@ generate_reports = true
 ## 🎯 Use Cases
 
 ### Research Applications
-- **Binary Analysis Studies** - Compare how different code patterns affect binary characteristics
-- **Reverse Engineering** - Generate diverse samples for analysis technique development
-- **Malware Research** - Create polymorphic variants for detection algorithm testing
+- **Advanced Binary Analysis**: Generate a corpus of functionally identical but structurally diverse binaries to study the impact of source-level changes on low-level characteristics. Researchers can measure metrics like **function-level entropy**, **control flow graph (CFG) complexity**, and **instruction set distribution** to develop more robust heuristics for binary analysis tools.
+- **Reverse Engineering Tool Development**: Create diverse binary samples to train and validate machine learning models for tasks such as **function boundary detection**, **code similarity (diffing)**, and **compiler provenance identification**. The generated variants serve as a controlled dataset for evaluating the accuracy and resilience of reverse engineering algorithms.
+- **Malware Evasion and Detection**: Simulate polymorphic and metamorphic malware by generating variants that evade signature-based detection. This allows security researchers to test the effectiveness of **antivirus engines**, **intrusion detection systems (IDS)**, and **sandboxing technologies** against evolving threats.
 
-### Software Testing
-- **Compiler Testing** - Validate compiler optimizations across functionally equivalent code
-- **Performance Analysis** - Compare execution characteristics of equivalent implementations
-- **Cross-platform Validation** - Test software behavior across different binary forms
+### Software Testing & Verification
+- **Compiler Fuzzing and Validation**: Systematically generate a wide array of source-code variants to test the correctness and stability of compilers (e.g., GCC, Clang). By compiling thousands of equivalent programs with different optimization flags (`-O1`, `-O2`, `-Os`), developers can uncover bugs in compiler optimization passes or code generation stages.
+- **Performance Regression Testing**: Analyze the performance trade-offs of different algorithmic implementations. By generating variants that use different loops, data structures, or memory access patterns, developers can compare execution characteristics like **CPU cycles**, **cache misses**, and **system call frequency** to identify and prevent performance regressions.
+- **Cross-Platform Behavior Analysis**: Verify that a program behaves consistently across different architectures (e.g., x86-64 vs. AArch64) or operating systems. Generating variants helps stress-test the toolchain and runtime environment, ensuring that subtle code changes do not lead to unexpected, platform-specific bugs.
 
 ### Educational Purposes
-- **Teaching Binary Analysis** - Demonstrate how code changes affect binary structure
-- **Algorithm Comparison** - Show different approaches to solving the same problem
-- **Security Education** - Illustrate code obfuscation and variant generation techniques
+- **Low-Level Code Comprehension**: Provide students with concrete examples of how high-level language constructs (e.g., loops, recursion, data structures) are translated into low-level assembly code. By comparing the binaries of different variants, learners can build a deeper intuition for the compilation process.
+- **Practical Algorithm Analysis**: Visually and quantitatively demonstrate the trade-offs between different algorithmic approaches to solving the same problem. Students can analyze the generated variants to see how they differ in terms of **binary size**, **execution speed**, and **memory consumption**.
+- **Cybersecurity Training**: Illustrate the principles of code obfuscation, polymorphism, and software protection. The suite can be used in cybersecurity courses to create hands-on labs where students learn to analyze and reverse-engineer obfuscated code.
 
 ## 🤝 Contributing
 
