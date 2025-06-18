@@ -6,6 +6,16 @@
 
 CodeGenome is a sophisticated system that generates functionally equivalent C code variants with different binary signatures. Using advanced AI transformation strategies and metamorphic techniques, it creates diverse program variants while maintaining identical functionality, making it invaluable for binary analysis research, reverse engineering studies, and software testing scenarios.
 
+> ### ⚠️ Important Notice
+>
+> **Note on Development Status**
+>
+> CodeGenome is an experimental project in active development. We encourage you to use it, test it, and contribute to its growth. However, please be aware that it may contain bugs or undergo significant changes. Your contributions via issues and pull requests are highly welcome.
+>
+> **Disclaimer and Responsible Use**
+>
+> This software is intended for educational, research, and defensive security purposes only. The authors do not condone any malicious use of this tool. Any actions you take using CodeGenome are your own responsibility. By using this software, you agree to do so in a manner that complies with all applicable laws and regulations and to adhere to the terms outlined in the `LICENSE` file.
+
 ## 📚 Table of Contents
 
 - [✨ Features](#-features)
