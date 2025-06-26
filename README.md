@@ -423,9 +423,9 @@ If you use CodeGenome in your research or projects, please cite:
 ```bibtex
 @software{codegenome_suite,
   title={CodeGenome: AI-Powered Code Variant Generation with Advanced Binary Analysis},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/yourusername/CodeGenome},
+  author={Alfredo Petruolo},
+  year={2025},
+  url={https://github.com/bobbinetor/CodeGenome},
   note={AI-powered system for generating functionally equivalent code variants}
 }
 ```
