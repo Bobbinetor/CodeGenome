@@ -1,0 +1,82 @@
+Ms. Ref. No.: KNOSYS-D-25-09923
+Title: Next-Gen Metamorphism: Analyzing the Potential of LLM-Driven
+Knowledge-Based Systems
+
+Dear Prof Roberto Nardone,
+
+Reviewers have now commented on your paper. You will see that they are advising that you revise your manuscript. If you are prepared to undertake the work required, I would be pleased to reconsider my decision. 
+
+For your guidance, reviewers' comments are appended below.
+
+If you decide to revise the work, please ensure the following are taken care
+
+Checklist:
+* While submitting revision, please ensure to submit a list of changes or a rebuttal against each point that was being raised when you submit the revised manuscript.
+* The revised cover letter, response to reviewers, highlights, revised manuscript, credit author statement, author agreement and declaration of interest should all be in word format (DOCX).
+* Source file alone can be in word or Latex file and only one final version of manuscript is only required
+* The tables, figures and equations should be in editable format in the revised manuscript.
+* Please make sure that all references, tables and figures are cited in the text
+* Figures should be in good quality 300 dpi and not in pdf format
+* For LaTex version, kindly ensure to check if supporting .bib and .cls files are also included.
+
+
+To submit a revision, please go to https://www.editorialmanager.com/knosys/ and login as an Author.
+Your username is: ********
+If you need to retrieve password details, please go to:
+********    
+
+On your Main Menu page is a folder entitled "Submissions Needing Revision". You will find your submission record there.
+
+PLEASE NOTE: Knowledge-Based Systems would like to enrich online articles by displaying interactive figures that help the reader to visualize and explore your research results. For this purpose, we would like to invite you to upload figures in the MATLAB .FIG file format as supplementary material to our online submission system. Elsevier will generate interactive figures from these files and include them with the online article on SciVerseScienceDirect. If you wish, you can submit .FIG files along with your revised submission.
+
+Please note that this journal offers a new, free service called AudioSlides: brief, webcast-style presentations that are shown next to published articles on ScienceDirect (see also http://www.elsevier.com/audioslides). If your paper is accepted for publication, you will automatically receive an invitation to create an AudioSlides presentation.
+
+Please note that we allow 21 days for the first author revision and 14 days for any additional author revisions that are required. The due date for submitting a revised manuscript files on Apr 01, 2026.
+
+
+Research Elements (optional)
+This journal encourages you to share research objects - including your raw data, methods, protocols, software, hardware and more – which support your original research article in a Research Elements journal. Research Elements are open access, multidisciplinary, peer-reviewed journals which make the objects associated with your research more discoverable, trustworthy and promote replicability and reproducibility. As open access journals, there may be an Article Publishing Charge if your paper is accepted for publication. Find out more about the Research Elements journals at https://www.elsevier.com/authors/tools-and-resources/research-elements-journals?dgcid=ec_em_research_elements_email.
+
+Yours sincerely,
+Jie Lu, PhD
+Editor in Chief
+Knowledge-Based Systems
+
+
+
+Editor comments:
+Revise
+
+Reviewers' comments:
+
+
+
+Reviewer #2: Comments on Highlights and Visuals:
+Highlights: The submitted highlights accurately reflect the core contributions of the paper. They correctly identify the three pillars of the study: structural diversity comparison, empirical evasion analysis, and the use of syscall/structural metrics.
+Figures/Graphical Abstract: Figure 1 serves effectively as a graphical abstract, clearly delineating the parallel evaluation workflows for LLMs and Metamorphic engines. Figure 2 (Radar Charts) is particularly strong, providing an excellent visual representation of how different LLMs specialize in different types of obfuscation (e.g., Gemini's control flow restructuring vs. ChatGPT's compression).
+
+Overview:
+The manuscript presents a meaningful contribution to the intersection of knowledge-based systems and cybersecurity. This paper presents a comparative study evaluating the code mutation capabilities of Large Language Models (LLMs) against traditional metamorphic engines. The authors propose a structured methodology to measure structural diversity and evasion rates, applying this to both benign software and a real-world malware sample (Alina-POS).While the study is well motivated and supported by a solid experimental design, moderate revisions are recommended to clarify the scope of the conclusions and strengthen the discussion on robustness and generalization.
+
+Strengths:
+Rigorous Quantitative Framework: The paper distinguishes itself by moving beyond qualitative examples. The use of specific static metrics (cyclomatic complexity, instruction mix) combined with Euclidean and Cosine distance measures provides a concrete, mathematical basis for the claim that LLMs produce more diverse code than traditional engines.
+High-Value Real-World Case Study: The inclusion of the Alina-POS malware analysis elevates the paper significantly. By demonstrating that LLM-generated variants could eliminate 100% of "Named Pipe" signatures and reduce "Card Data" signatures by 37.5%, the authors provide compelling evidence of the "knowledge-based" evasion capabilities of these models.
+Comprehensive Model Evaluation: The study benchmarks a wide range of current commercial models (Claude 3.7, Gemini 2.0 Flash, DeepSeek R1, etc.). This breadth ensures the findings are representative of the current state of the art rather than limited to a single model architecture.
+
+Weaknesses:
+Methodological Asymmetry (Source vs. Binary): The comparison arguably favors LLMs. The methodology states that LLMs generated variants at the source code level , while the baseline (MetaMe) operated on compiled binaries. Source-level mutation inherently allows for greater structural flexibility (logic rewriting, variable renaming) than binary rewriting. This discrepancy should be more explicitly addressed as a limitation, as it contributes significantly to the higher diversity scores of the LLMs.
+Scope of Evasion Testing: The paper claims "superior evasion capabilities" , but the empirical testing is limited to YARA rules (signature-based detection). Modern security postures rely heavily on Behavioral Analysis and EDR. The authors' own dynamic analysis shows high similarity in syscall sequences, suggesting that these "evasive" variants might be easily detected by dynamic engines. The conclusion would be stronger if it explicitly admitted that "knowledge-based evasion" currently defeats signatures but not necessarily behavioral heuristics.
+Reproducibility Regarding Safety Filters: The paper uses commercial models (e.g., Claude, GPT) to mutate real malware (Alina-POS). These models typically have strict safety filters that refuse such requests. The manuscript does not explain the prompting strategy or "jailbreaking" techniques used to bypass these filters. Without this information, the experiment is difficult to reproduce, and a key factor in the threat model (the difficulty of coercing the AI) is missing.
+
+
+
+Reviewer #3: Overall Reviewer Summary
+This paper investigates the potential of Large Language Models (LLMs) in malware mutation and detection evasion, addressing a timely and security-critical question that has attracted increasing attention but remains insufficiently explored through systematic empirical comparison. The authors conduct an experimental study comparing LLM-based code mutation with traditional metamorphic engines, aiming to assess whether LLMs can effectively replace or outperform classical approaches.
+From a contribution perspective, the paper exhibits several positive aspects. First, the topic is highly relevant to contemporary cybersecurity research, particularly in light of the rapid deployment of LLMs and their potential misuse in offensive settings. Second, the study explicitly includes a traditional metamorphic engine as a baseline, rather than evaluating LLMs in isolation, which strengthens the comparative framing of the work. Third, the authors design a relatively comprehensive experimental pipeline that integrates source-level code generation, binary-level static analysis, dynamic syscall-based validation, and YARA-based signature detection. Finally, the inclusion of a real-world malware case study (Alina-POS) enhances the practical relevance of the analysis.
+However, despite these strengths, the core claims of the paper are substantially limited by the following four major issues:
+1. Fundamental asymmetry in the comparison setup: LLMs operate at the source-code level, whereas the metamorphic engine performs transformations at the binary level. Source-level rewriting inherently enables much broader structural reorganization, which likely inflates structural diversity metrics and weakens the causal attribution of superiority to LLMs themselves.
+2. Over-reliance on structural diversity as a proxy for evasion: The paper treats increased distance in handcrafted structural feature space as a primary indicator of detection evasion, yet the relationship between such metrics and real-world detection robustness is neither theoretically justified nor empirically established.
+3. Narrow detection evaluation: The experimental evaluation is almost exclusively based on custom YARA rules. The absence of behavior-based detectors, learning-based approaches, or commercial antivirus systems significantly limits the generality of the conclusions.
+4. Overstated conclusions: Claims such as a "paradigm shift" toward knowledge-based evasion are not sufficiently supported by the presented evidence and appear more speculative than rigorously demonstrated.
+Recommendation
+Overall, the paper addresses an important problem and demonstrates a nontrivial experimental effort. Nevertheless, methodological asymmetries and overly strong claims undermine the validity and generalizability of the conclusions. Based on these considerations, I recommend Major Revision. With a fairer comparative setup, broader detection evaluation, and more restrained claims, the work has the potential to become a solid empirical contribution.

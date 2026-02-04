@@ -757,7 +757,7 @@ Enhanced Agentic System - CodeGenome Suite v3.0
         """Compile C code and return success status and details"""
         try:
             result = subprocess.run(
-                ['gcc', '-o', output_file, source_file, '-w'],  # -w suppresses warnings
+                ['gcc', '-o', output_file, source_file, '-w', '-lm'],  # -w suppresses warnings, -lm links math library
                 capture_output=True,
                 text=True,
                 timeout=30
