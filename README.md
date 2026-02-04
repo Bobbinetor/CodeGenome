@@ -1,447 +1,571 @@
-# CodeGenome Suite
+# CodeGenome - Guida Sperimentale con run_experiment.py
 
 ![CodeGenome Suite](cli.png)
 
-**AI-Powered Code Variant Generation with Advanced Binary Analysis**
+**Generazione di Varianti Binarie tramite LLM e Metamorfismo**
 
-CodeGenome is a sophisticated system that generates functionally equivalent C code variants with different binary signatures. Using advanced AI transformation strategies and metamorphic techniques, it creates diverse program variants while maintaining identical functionality, making it invaluable for binary analysis research, reverse engineering studies, and software testing scenarios.
-
-> ### ⚠️ Important Notice
+> ⚠️ **NOTA IMPORTANTE**
 >
-> **Note on Development Status**
+> Questa guida si concentra esclusivamente su **`run_experiment.py`**, una versione semplificata e sperimentale di CodeGenome. Questo script è pensato per esplorare la generazione di varianti binarie funzionalmente equivalenti tramite LLM e confrontarle con tool tradizionali come MetaME.
+
+---
+
+## 📚 Indice
+
+- [Cos'è questo Progetto](#-cosè-questo-progetto)
+- [Prerequisiti e Installazione](#-prerequisiti-e-installazione)
+- [Comprendere il Workflow](#-comprendere-il-workflow)
+- [Guida Rapida](#-guida-rapida)
+- [Parametri di Configurazione](#-parametri-di-configurazione)
+- [Il Processo di Patching](#-il-processo-di-patching)
+- [Test di Equivalenza](#-test-di-equivalenza)
+- [Metriche e Analisi](#-metriche-e-analisi)
+- [Risoluzione Problemi](#-risoluzione-problemi)
+
+---
+
+## 🎯 Cos'è questo Progetto
+
+### Obiettivo
+Generare **varianti binarie** di un programma che siano:
+1. **Strutturalmente diverse** - Il codice macchina è differente
+2. **Funzionalmente equivalenti** - Producono lo stesso output
+
+### Il Problema del Patching
+
+> ⚠️ **STATO ATTUALE: WORK IN PROGRESS**
 >
-> CodeGenome is an experimental project in active development. We encourage you to use it, test it, and contribute to its growth. However, please be aware that it may contain bugs or undergo significant changes. Your contributions via issues and pull requests are highly welcome.
+> Le patch generate dall'LLM **NON funzionano sempre**. L'obiettivo di questo progetto sperimentale è trovare il modo corretto di patchare il binario affinché:
+> - La patch venga applicata con successo
+> - Il binario compili correttamente  
+> - Il binario rimanga funzionalmente equivalente all'originale
 >
-> **Disclaimer and Responsible Use**
->
-> This software is intended for educational, research, and defensive security purposes only. The authors do not condone any malicious use of this tool. Any actions you take using CodeGenome are your own responsibility. By using this software, you agree to do so in a manner that complies with all applicable laws and regulations and to adhere to the terms outlined in the `LICENSE` file.
+> Questo README documenta lo stato attuale e il workflow per sperimentare.
 
-## 📚 Table of Contents
+### Perché run_experiment.py?
+`run_experiment.py` è uno script standalone che permette di:
+- Configurare l'esperimento modificando variabili in cima al file
+- Generare varianti con MetaME (baseline tradizionale)
+- Generare varianti con LLM (sperimentale)
+- Confrontare i risultati
 
-- [✨ Features](#-features)
-- [🏗️ Architecture](#️-architecture)
-- [🔑 Key Files](#-key-files)
-- [🚀 Getting Started](#-getting-started)
-- [🔧 Configuration](#-configuration)
-- [📖 Workflow Examples](#-workflow-examples)
-- [📁 Output Structure](#-output-structure)
-- [🔧 Advanced Configuration](#-advanced-configuration)
-- [🎯 Use Cases](#-use-cases)
-- [🤝 Contributing](#-contributing)
-- [📜 Citation](#-citation)
-- [📄 License](#-license)
-- [🙏 Acknowledgments](#-acknowledgments)
+---
 
-## ✨ Features
+## 🛠️ Prerequisiti e Installazione
 
-### 🤖 AI-Powered Variant Generation
-- **Advanced Transformation Strategies**: Leverages AI-driven strategies to maximize binary differentiation. These strategies include altering control flow, data types , and algorithmic structure.
-- **LLM-Based Code Restructuring**: Utilizes Large Language Models via Ollama (e.g., `gemma3:27b`) to perform complex, semantics-preserving code transformations that go beyond simple pattern replacement.
-- **Intelligent Prompt Engineering**: Employs a  prompt templating system (`AI_PROMPT_TEMPLATE`) that instructs the LLM to maintain functional equivalence while diversifying code patterns, variable names, and mathematical expressions.
-- **Automated Test Suite Generation**: Analyzes the source code to automatically generate a suite of test cases (`test_cases.json`) and a Python-based test runner (`test_runner.py`) to rigorously validate the functional correctness of each generated variant.
-- **Performance & Metrics Logging**: Monitors the LLM's performance, tracking metrics like generation time, token usage, and success rates. This data is logged to both JSON and CSV files (`ai_generation_metrics.json`, `ai_generation_metrics.csv`) for analysis.
-
-### 📊 Advanced Binary Analysis
-- **Multi-Tool Static & Dynamic Analysis**: Integrates `radare2` for deep static analysis of binary properties (e.g., function size, cyclomatic complexity, entropy) and `strace` for dynamic analysis of system call patterns during execution.
-- **Comparative Radar Chart Visualizations**: Generates intuitive radar charts to visually compare key metrics across multiple binaries, providing a clear overview of their structural and behavioral differences.
-- **System Call Pattern Analysis**: Captures and analyzes syscall sequences using n-gram modeling to identify unique behavioral fingerprints, which are crucial for detecting subtle functional deviations.
-- **Feature-Based Distance Matrices**: Calculates and exports Euclidean and Cosine similarity matrices based on a vector of binary features, offering a quantitative measure of how "different" the variants are from each other.
-- **Interactive Binary Management**: Provides a CLI-based interface for selecting, grouping, and managing binaries for analysis, with smart categorization based on their origin (AI-generated, MetaME-transformed, or original).
-
-### 🔬 MetaME Integration
-- **Metamorphic Binary Transformation**: Directly manipulates compiled executables using the MetaME engine to apply a series of semantic-preserving transformations at the binary level.
-- **Configurable Transformation Passes**: Allows for the configuration of specific transformation passes within MetaME, such as instruction substitution, register reassignment, and code transposition, to complement the source-level changes made by the AI.
-
-### 🖥️ Modern CLI Interface
-- **Unified & Interactive Workflow**: A single, powerful CLI (`codegenome_cli.py`) manages the entire workflow, from loading source/binary files to generation, analysis, and results visualization.
-- **Intelligent Path Completion**: Features shell-like tab completion for file paths and commands, significantly speeding up user interaction.
-- **Real-Time Status Feedback**: Uses rich formatting and status indicators to provide clear, real-time feedback on ongoing processes like AI generation or binary analysis.
-
-### ✅ Validation & Testing
-- **Automated Functional Equivalence Verification**: For each generated variant, the system compiles the code and runs the auto-generated test suite against it, comparing the output against the original program's output to ensure correctness.
-- **Standalone Test Runners**: Each test suite is self-contained and includes a dedicated runner, allowing for easy, independent verification or manual testing of any variant outside the CodeGenome suite.
-
-## 🏗️ Architecture
-
-```
-CodeGenome Suite Architecture:
-
-┌─────────────────────────────────────────────────────────────┐
-│                    CLI Interface Layer                      │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │ codegenome_cli  │  │ Terminal UI     │                  │
-│  │ (Modern CLI)    │  │ (Interactive)   │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                    Core Application Layer                   │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │ codegenome_core │  │ AgenticLLM      │                  │
-│  │ (Main Logic)    │  │ (AI Agent)      │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                    Generation Engines                       │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │ ai_engine       │  │ MetaME          │                  │
-│  │ (AI Variants)   │  │ (Binary Morphs) │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                    Analysis & Validation                    │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │ advanced_binary │  │ Test Suites     │                  │
-│  │ _analyzer       │  │ (Validation)    │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🔑 Key Files
-
-### Core Components
-- **`codegenome_cli.py`** - Modern CLI interface with tab completion and unified file handling
-- **`ai_engine.py`** - Enhanced AI transformation engine with 6 strategic approaches
-- **`advanced_binary_analyzer.py`** - Comprehensive binary analysis with radar charts and metrics
-- **`codegenome_core.py`** - Core application logic and terminal interface management
-- **`config.py`** - Unified configuration system with well-documented settings
-
-### Configuration & Data
-- **`config.toml`** - Single configuration file for all system settings
-- **`requirements.txt`** - Python dependencies and package versions
-- **`workspace/`** - Generated variants, test suites, and analysis results
-- **`source_code/`** - Sample C programs for testing and demonstration
-
-## 🚀 Getting Started
-
-This guide will walk you through setting up the CodeGenome Suite and running it for the first time.
-
-### Prerequisites
-
-#### System Requirements
-Ensure you have the essential development tools installed.
+### 1. Requisiti di Sistema
 
 ```bash
-# For Ubuntu/Debian-based systems
+# Ubuntu/Debian
 sudo apt update
 sudo apt install build-essential gcc git python3 python3-pip
 ```
 
-#### Python Dependencies
-Install the required Python packages using pip.
+### 2. Dipendenze Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### For Making MetaME Work (Optional)
+Le dipendenze principali sono:
+- `rich` - Interfaccia terminale
+- `requests` - Chiamate HTTP alle API
+- `keystone-engine` - Assemblaggio istruzioni
 
-MetaME enables binary-level transformations and requires a specific version of `radare2`. If you don't need this feature, you can skip this step.
+---
 
-#### Prerequisites for radare2
+### 3. Installazione MetaME (Baseline)
+
+MetaME è un motore metamorfico tradizionale che useremo come baseline di confronto.
+
+#### 3.1 Prerequisiti per radare2
+
 ```bash
-# Add 32-bit architecture support
+# Supporto architettura 32-bit
 sudo dpkg --add-architecture i386
 sudo apt update
 
-# Install development tools and multilib support
+# Tool di sviluppo
 sudo apt install build-essential git
 sudo apt install libc6-dev-i386 gcc-multilib g++-multilib
 ```
 
-#### Install Specific radare2 Version
+#### 3.2 Installare radare2 (versione specifica!)
+
+> ⚠️ MetaME richiede una versione specifica di radare2
+
 ```bash
-# Clone, checkout the specific commit, and install
 git clone https://github.com/radareorg/radare2.git
 cd radare2
 git checkout 41dc7e6db6932ebca90a9bc66ee58ee845880fee
 sudo sys/install.sh
 cd ..
 ```
-This specific commit (`41dc7e6db6932ebca90a9bc66ee58ee845880fee`) is crucial for MetaME compatibility.
 
-### Getting Started: First Run
-
-#### 1. Setup Ollama & Pull AI Model
-CodeGenome uses Ollama to run the AI models locally. First, install Ollama and ensure the service is running.
+#### 3.3 Installare MetaME
 
 ```bash
-# Install Ollama (if you haven't already)
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Start the Ollama service in the background
-ollama serve &
-
-# Pull the recommended model for a balance of performance and quality
-ollama pull gemma3:12b
+pip install metame
 ```
-For faster generation on less powerful hardware, you can pull a smaller model (`ollama pull gemma3:1b`), but be sure to update the `LLM_MODEL` in `config.py`.
 
-#### 2. Launch the CodeGenome CLI
-With the prerequisites installed and the AI model ready, you can now start the application.
-
+Verifica l'installazione:
 ```bash
-python3 codegenome_cli.py
+metame --help
 ```
-
-You will be greeted by the CodeGenome prompt (`CodeGenome ❯`).
-
-#### 3. Your First Generation & Analysis
-From the CLI, you can load a source file, generate AI variants, and analyze the results.
-
-```bash
-# Load a sample C source file
-CodeGenome ❯ load source_code/hello_world.c
-
-# Generate 2 AI variants from the loaded file
-CodeGenome [📄1] ❯ ai
-Number of AI variants to generate: 2
-
-# Analyze the generated binaries to see how they differ
-CodeGenome [📄1 🤖2] ❯ analyze
-```
-The suite will guide you through selecting binaries for analysis and will output the results in the `workspace/analysis_results/` directory.
-
-## 🔧 Configuration
-
-Configuration is managed in the `config.py` file, which is designed to be simple and easy to modify. Below is a breakdown of the key sections and settings you can customize.
-
-#### LLM Configuration
-This section controls the behavior of the AI model.
-
-```python
-# Which LLM model to use for code generation
-LLM_MODEL = "gemma3:27b"          # Main model (gemma3:12b recommended)
-LLM_FALLBACK_MODEL = "gemma3:1b"  # Faster fallback model
-LLM_BASE_URL = "http://localhost:11434"  # Ollama server URL
-
-# LLM generation parameters - adjust for creativity vs consistency
-LLM_TEMPERATURE = 0.4      # Lower = more consistent, Higher = more creative (0.0-1.0)
-LLM_TIMEOUT = 45           # Seconds to wait for LLM response
-LLM_MAX_RETRIES = 3        # How many times to retry on failure
-```
-
-- `LLM_MODEL`: The primary Ollama model for generating code variants.
-- `LLM_FALLBACK_MODEL`: A smaller, faster model to use if the primary one fails.
-- `LLM_BASE_URL`: The URL of your running Ollama instance.
-- `LLM_TEMPERATURE`: Controls the creativity of the AI. Lower values produce more predictable code, while higher values result in more diverse and creative outputs.
-- `LLM_TIMEOUT`: The maximum time to wait for a response from the model.
-- `LLM_MAX_RETRIES`: The number of times to retry if the model fails to generate a valid response.
-
-#### AI Prompts
-This section allows you to customize the instructions given to the AI for transforming code.
-
-```python
-# Main prompt template
-AI_PROMPT_TEMPLATE = """Transform this C code with {focus} while keeping EXACT same output:
-
-{source_code}
-
-Requirements:
-- Identical output and behavior
-- Different variable names
-- Different loop types  
-- Compilable C code
-
-Transformed code:"""
-
-# Different transformation focuses for variants
-AI_VARIANT_1_FOCUS = "Change for→while loops, int→long variables, rename all variables"
-AI_VARIANT_2_FOCUS = "Use backward iteration, arrays instead of scalars, different math"
-AI_VARIANT_3_FOCUS = "Recursive approach, helper functions, reorganize computation"
-```
-
-- `AI_PROMPT_TEMPLATE`: The main template used to instruct the AI. You can modify the requirements to guide the transformation process.
-- `AI_VARIANT_FOCUS`: These variables define different transformation strategies. The text provided here will be inserted into the `{focus}` placeholder in the main prompt.
-
-#### Testing Configuration
-These settings control the automated test generation and validation process.
-
-```python
-# Test generation settings
-TESTING_ENABLED = True           # Enable test generation and validation
-MAX_TEST_CASES = 20              # Maximum test cases per variant
-MIN_TEST_CASES = 4               # Minimum test cases per variant
-TEST_TIMEOUT = 10                # Seconds per test execution
-```
-
-- `TESTING_ENABLED`: A master switch to turn test generation on or off.
-- `MAX_TEST_CASES` / `MIN_TEST_CASES`: The range for how many test cases the AI should generate for each variant.
-- `TEST_TIMEOUT`: The maximum time allowed for a single test case to run.
-
-#### Workspace and Files
-This section defines the directory structure for inputs and outputs.
-
-```python
-# Directory structure
-WORKSPACE_DIR = "workspace"                    # Main workspace directory
-SOURCE_CODE_DIR = "source_code"              # Where to find source files
-TEST_SUITES_DIR = "workspace/test_suites"    # Generated test suites
-METRICS_DIR = "workspace/llm_metrics"        # Performance metrics
-```
-
-#### Binary Analysis
-Configure the tools and settings for analyzing the generated binaries.
-
-```python
-# Analysis tools (set to False if not installed)
-USE_RADARE2 = True              # Use radare2 for binary analysis
-USE_STRACE = True               # Use strace for syscall tracing
-ENABLE_DYNAMIC_ANALYSIS = False # Enable dynamic analysis (requires strace)
-
-# Analysis settings
-STRACE_TIMEOUT = 30             # Seconds for strace execution
-GENERATE_RADAR_CHARTS = True    # Create visual comparison charts
-```
-
-- `USE_RADARE2` / `USE_STRACE`: Enable or disable specific analysis tools.
-- `ENABLE_DYNAMIC_ANALYSIS`: A master switch for dynamic analysis, which relies on `strace`.
-- `GENERATE_RADAR_CHARTS`: If enabled, the suite will generate radar charts to visualize the differences between binaries.
-
-## 📖 Workflow Examples
-
-### AI Variant Generation
-```bash
-# Load a C source file
-CodeGenome ❯ load myprogram.c
-
-# Generate multiple variants with different strategies
-CodeGenome [📄1] ❯ ai
-Number of AI variants to generate: 3
-
-# Results: 3 functionally equivalent variants with different binary signatures
-```
-
-### Binary Analysis
-```bash
-# Load existing binaries or use generated variants
-CodeGenome ❯ load workspace/
-
-# Analyze all loaded binaries
-CodeGenome [🎯5] ❯ analyze
-# Select binaries for comparison
-# Results: Radar charts, similarity matrices, detailed reports
-```
-
-### MetaME Transformations
-```bash
-# Load compiled binaries
-CodeGenome ❯ load binaries/
-
-# Generate metamorphic variants
-CodeGenome [🎯3] ❯ metame
-# Results: Binary-level transformed variants
-```
-
-## 📁 Output Structure
-
-```
-workspace/
-├── variants/                     # Generated code variants
-│   ├── program_ai_v01.c
-│   ├── program_ai_v02.c
-│   └── program_ai_v03.c
-├── test_suites/                  # Validation test suites
-│   ├── program_ai_v01/
-│   │   ├── test_cases.json
-│   │   ├── test_runner.py
-│   │   └── README.md
-├── analysis_results/             # Binary analysis reports
-│   ├── radar_comparison.png
-│   ├── analysis_report.json
-│   └── distance_matrix.csv
-└── llm_metrics/                  # Performance metrics
-    ├── ai_generation_metrics.csv
-    └── ai_generation_metrics.json
-```
-
-## 🔧 Advanced Configuration
-
-### LLM Prompt Customization
-Modify the AI transformation prompts in `ai_engine.py`:
-
-```python
-# Example from ai_engine.py
-def _get_transformation_prompt(self, source_code: str, strategy: str) -> str:
-    # ...
-    prompts = {
-        "obfuscate": "Obfuscate this C code...",
-        # ...
-    }
-```
-
-### Analysis Tool Configuration
-```toml
-# From config.toml
-[analysis]
-enable_dynamic = true
-enable_static = true
-generate_reports = true
-```
-
-## 🎯 Use Cases
-
-### Research Applications
-- **Advanced Binary Analysis**: Generate a corpus of functionally identical but structurally diverse binaries to study the impact of source-level changes on low-level characteristics. Researchers can measure metrics like **function-level entropy**, **control flow graph (CFG) complexity**, and **instruction set distribution** to develop more robust heuristics for binary analysis tools.
-- **Reverse Engineering Tool Development**: Create diverse binary samples to train and validate machine learning models for tasks such as **function boundary detection**, **code similarity (diffing)**, and **compiler provenance identification**. The generated variants serve as a controlled dataset for evaluating the accuracy and resilience of reverse engineering algorithms.
-- **Malware Evasion and Detection**: Simulate polymorphic and metamorphic malware by generating variants that evade signature-based detection. This allows security researchers to test the effectiveness of **antivirus engines**, **intrusion detection systems (IDS)**, and **sandboxing technologies** against evolving threats.
-
-### Software Testing & Verification
-- **Compiler Fuzzing and Validation**: Systematically generate a wide array of source-code variants to test the correctness and stability of compilers (e.g., GCC, Clang). By compiling thousands of equivalent programs with different optimization flags (`-O1`, `-O2`, `-Os`), developers can uncover bugs in compiler optimization passes or code generation stages.
-- **Performance Regression Testing**: Analyze the performance trade-offs of different algorithmic implementations. By generating variants that use different loops, data structures, or memory access patterns, developers can compare execution characteristics like **CPU cycles**, **cache misses**, and **system call frequency** to identify and prevent performance regressions.
-- **Cross-Platform Behavior Analysis**: Verify that a program behaves consistently across different architectures (e.g., x86-64 vs. AArch64) or operating systems. Generating variants helps stress-test the toolchain and runtime environment, ensuring that subtle code changes do not lead to unexpected, platform-specific bugs.
-
-### Educational Purposes
-- **Low-Level Code Comprehension**: Provide students with concrete examples of how high-level language constructs (e.g., loops, recursion, data structures) are translated into low-level assembly code. By comparing the binaries of different variants, learners can build a deeper intuition for the compilation process.
-- **Practical Algorithm Analysis**: Visually and quantitatively demonstrate the trade-offs between different algorithmic approaches to solving the same problem. Students can analyze the generated variants to see how they differ in terms of **binary size**, **execution speed**, and **memory consumption**.
-- **Cybersecurity Training**: Illustrate the principles of code obfuscation, polymorphism, and software protection. The suite can be used in cybersecurity courses to create hands-on labs where students learn to analyze and reverse-engineer obfuscated code.
-
-## 🤝 Contributing
-
-We welcome contributions to improve CodeGenome! Areas where you can help:
-
-- **New Transformation Strategies** - Implement additional AI transformation approaches
-- **Analysis Tools Integration** - Add support for more binary analysis tools
-- **Performance Optimizations** - Improve generation speed and efficiency
-- **Documentation** - Enhance guides, examples, and API documentation
-- **Platform Support** - Extend compatibility to additional operating systems
-- **UI/UX Improvements** - Enhance the CLI interface and user experience
-
-### How to Contribute
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📜 Citation
-
-If you use CodeGenome in your research or projects, please cite:
-
-```bibtex
-@software{codegenome_suite,
-  title={CodeGenome: AI-Powered Code Variant Generation with Advanced Binary Analysis},
-  author={Alfredo Petruolo},
-  year={2025},
-  url={https://github.com/bobbinetor/CodeGenome},
-  note={AI-powered system for generating functionally equivalent code variants}
-}
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the `LICENSE` file for details.
-
-## 🙏 Acknowledgments
-
-- **Ollama Team** for providing the LLM infrastructure
-- **radare2 Project** for comprehensive binary analysis capabilities
-- **MetaME Developers** for metamorphic transformation engine
-- **Rich Library** for beautiful terminal interfaces
-- **Open Source Community** for the foundational tools and libraries
 
 ---
 
-**CodeGenome Suite** - Pushing the boundaries of automated code variant generation and binary analysis research.
+### 4. Configurazione Ollama Cloud
+
+Per usare modelli LLM performanti tramite Ollama Cloud:
+
+#### 4.1 Installare Ollama
+
+```bash
+curl -fsSL https://ollama.ai/install.sh | sh
+```
+
+#### 4.2 Creare Account e API Key
+
+1. Vai su [ollama.com](https://ollama.com)
+2. Crea un account
+3. Vai nelle impostazioni e genera una **API Key**
+
+#### 4.3 Autenticazione
+
+```bash
+ollama signin
+# Inserisci la tua API key quando richiesto
+```
+
+#### 4.4 Modelli Consigliati
+
+Dopo il signin, puoi usare modelli cloud performanti, li puoi trovare su internet vendo ollama models, sono contraddistinti dalla dicitura cloud, per esempio:
+- gpt-oss:120b-cloud
+
+---
+
+### 5. Alternativa: OpenRouter (API OpenAI-compatibile)
+
+Se preferisci usare API OpenAI-compatibili con accesso a più modelli:
+
+#### 5.1 Creare Account OpenRouter
+
+1. Vai su [openrouter.ai](https://openrouter.ai)
+2. Crea un account
+3. **Carica credito** nel tuo wallet (richiesto per usare i modelli)
+4. Copia la tua API key
+
+#### 5.2 Configurazione nello Script
+
+Modifica `run_experiment.py`:
+
+```python
+OLLAMA_BASE_URL = "https://openrouter.ai/api/v1"
+# Aggiungi header autorizzazione nelle chiamate
+```
+
+> 📝 Vedi sezione [Parametri di Configurazione](#-parametri-di-configurazione) per dettagli.
+
+---
+
+## 🔄 Comprendere il Workflow
+
+### Flusso di Esecuzione
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    INPUT                                     │
+│  source_code/calcolatrice.c                                 │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  COMPILAZIONE                                │
+│  gcc → calcolatrice_original (binario ELF)                  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┴───────────────────┐
+        ▼                                       ▼
+┌───────────────────┐                 ┌───────────────────┐
+│    METAME         │                 │    LLM            │
+│    (Baseline)     │                 │    (Sperimentale) │
+│                   │                 │                   │
+│  Trasformazioni   │                 │  1. Disassembla   │
+│  a livello byte:  │                 │  2. LLM genera    │
+│  - NOP insertion  │                 │     patch ASM     │
+│  - Jmp subst.     │                 │  3. Applica patch │
+│  - Reg. rename    │                 │  4. Verifica      │
+└───────────────────┘                 └───────────────────┘
+        │                                       │
+        └───────────────────┬───────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  VARIANTI GENERATE                           │
+│  calcolatrice_metame_v01, calcolatrice_gemma3_v01, ...     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  TEST EQUIVALENZA                            │
+│  Esegui ogni variante con stessi input                      │
+│  Confronta output con originale                             │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  ANALISI E METRICHE                          │
+│  - Distanza Euclidea/Coseno                                 │
+│  - Radar charts                                             │
+│  - Report CSV/JSON                                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Le Due Modalità
+
+| Modalità | Descrizione |
+|----------|-------------|
+| `binary` | Disassembla il binario e genera patch ASM con LLM |
+| `source` | Trasforma il codice C sorgente con LLM |
+
+Per questo lavoro useremo principalmente la modalità **binary**.
+
+---
+
+## 🚀 Guida Rapida
+
+### Passo 1: Configura lo Script
+
+Apri `run_experiment.py` e modifica le variabili di configurazione (linee 21-74):
+
+```python
+# File sorgente C da usare
+SOURCE_FILE = "source_code/calcolatrice.c"
+
+# Modalità: "source" o "binary"
+EXPERIMENT_MODE = "binary"
+
+# Abilita/disabilita strumenti
+USE_METAME = True      # Generare varianti MetaME?
+USE_LLM = True         # Generare varianti LLM?
+
+# Configurazione LLM
+OLLAMA_MODEL = "gemma3:12b"
+LLM_MODELS = [
+    {"model": "gemma3:12b", "variants": 2},
+]
+```
+
+### Passo 2: Esegui Solo MetaME (Test Iniziale)
+
+Per verificare che l'installazione funzioni, inizia solo con MetaME:
+
+```python
+USE_METAME = True
+USE_LLM = False        # Disabilita LLM per ora
+METAME_NUM_VARIANTS = 2
+```
+
+Esegui:
+```bash
+python3 run_experiment.py
+```
+
+### Passo 3: Esegui con LLM
+
+Una volta verificato MetaME, abilita l'LLM:
+
+```python
+USE_METAME = True
+USE_LLM = True
+LLM_MODELS = [
+    {"model": "gemma3:12b", "variants": 2},
+]
+```
+
+Esegui:
+```bash
+python3 run_experiment.py
+```
+
+### Output
+
+I risultati vengono salvati in:
+```
+workspace/experiments/exp_YYYYMMDD_HHMMSS/
+├── calcolatrice_original          # Binario originale
+├── calcolatrice_metame_v01        # Variante MetaME 1
+├── calcolatrice_metame_v02        # Variante MetaME 2
+├── calcolatrice_gemma3_v01        # Variante LLM 1
+├── calcolatrice_gemma3_v01.asm    # ASM delle patch
+├── original.asm                   # Disassemblato originale
+├── raw_llm_io.txt                 # Log I/O con LLM
+├── results_complete.csv           # Report risultati
+└── analysis_results/              # Analisi comparative
+    ├── radar_comparison.png
+    └── advanced_analysis_report.json
+```
+
+---
+
+## ⚙️ Parametri di Configurazione
+
+### Configurazione Base (linee 21-50)
+
+| Parametro | Valore Default | Descrizione |
+|-----------|----------------|-------------|
+| `SOURCE_FILE` | `"source_code/calcolatrice.c"` | File C sorgente |
+| `EXPERIMENT_MODE` | `"binary"` | `"source"` o `"binary"` |
+| `EXPERIMENT_NAME` | auto-generato | Nome cartella output |
+| `WORKSPACE_DIR` | `"workspace/experiments"` | Directory output |
+
+### Configurazione LLM (linee 32-51)
+
+| Parametro | Valore Default | Descrizione |
+|-----------|----------------|-------------|
+| `USE_LLM` | `True` | Abilita generazione LLM |
+| `LLM_TIMEOUT` | `300` | Timeout in secondi |
+| `LLM_TEMPERATURE` | `0.4` | Creatività (0.0-1.0) |
+| `OLLAMA_BASE_URL` | `"http://localhost:11434"` | URL API Ollama |
+| `OLLAMA_MODEL` | `"gemma3:12b"` | Modello default |
+| `LLM_MODELS` | Lista | Configurazione multi-modello |
+
+### Configurazione Patching (linee 47-51)
+
+| Parametro | Valore Default | Descrizione |
+|-----------|----------------|-------------|
+| `DISASSEMBLER` | `"objdump"` | `"objdump"` o `"radare2"` |
+| `ASM_SYNTAX` | `"intel"` | `"intel"` o `"att"` |
+| `REASSEMBLY_METHOD` | `"r2patch"` | `"r2patch"`, `"keystone"`, `"gas_full"` |
+| `PATCH_STRATEGY` | `"multi_strategy"` | `"function_rewrite"` o `"multi_strategy"` |
+
+### Configurazione MetaME (linee 53-57)
+
+| Parametro | Valore Default | Descrizione |
+|-----------|----------------|-------------|
+| `USE_METAME` | `True` | Abilita MetaME |
+| `METAME_PATH` | path assoluto | Percorso eseguibile metame |
+| `METAME_NUM_VARIANTS` | `2` | Numero varianti da generare |
+
+---
+
+## 🔧 Il Processo di Patching
+
+### Cos'è il Patching Binario
+
+Il **patching binario** consiste nel modificare direttamente le istruzioni macchina in un eseguibile compilato, senza ricompilare da sorgente.
+
+Esempio:
+```
+Originale:  xor eax, eax    (2 bytes: 31 C0)
+Patch:      sub eax, eax    (2 bytes: 29 C0)
+```
+
+Entrambe le istruzioni azzerano il registro `eax`, ma hanno encoding diverso.
+
+### Le 6 Strategie di Trasformazione
+
+Lo script usa `multi_aspect_llm_transform.py` che implementa 6 strategie:
+
+| # | Strategia | Descrizione |
+|---|-----------|-------------|
+| 1 | **Function** | Riscrive intere funzioni |
+| 2 | **Basic Block** | Trasforma blocchi di istruzioni |
+| 3 | **CFG** | Modifica salti condizionali (je↔jz) |
+| 4 | **Data** | Trasforma riferimenti a dati |
+| 5 | **Call** | Modifica chiamate di funzione |
+| 6 | **Stack** | Trasforma operazioni stack |
+
+### Vincoli di Dimensione
+
+> ⚠️ **REGOLA FONDAMENTALE**: La nuova istruzione deve avere dimensione **≤** all'originale
+
+Perché? Il binario ha indirizzi fissi. Se inseriamo un'istruzione più grande, "schiacciamo" quella successiva.
+
+```
+VIETATO:
+  mov eax, 0      (5 bytes)  →  push rbx; xor ebx,ebx; mov eax,ebx; pop rbx  (10+ bytes)
+                                 ^^^^^^^^ NON ENTRA! ^^^^^^^^
+
+PERMESSO:
+  mov eax, 0      (5 bytes)  →  xor eax, eax  (2 bytes) + NOP padding (3 bytes)
+                                 ^^^^^^^^ OK, più piccolo ^^^^^^^^
+```
+
+### Verifica Per-Patch con Rollback
+
+Per ogni patch proposta dall'LLM, lo script:
+
+1. **Salva** i bytes originali
+2. **Applica** la patch
+3. **Testa** il binario con input di prova
+4. **Se funziona**: mantiene la patch
+5. **Se fallisce**: **rollback** ai bytes originali
+
+```python
+# Pseudocodice del processo
+for patch in patches:
+    original_bytes = read(file, patch.address)
+    write(file, patch.address, patch.new_bytes)
+    
+    if test_binary() == FAIL:
+        write(file, patch.address, original_bytes)  # Rollback!
+        log("Patch annullata")
+    else:
+        log("Patch applicata")
+```
+
+### ⚠️ Attenzione al "Cheating" dell'LLM
+
+> **IMPORTANTE**: L'LLM potrebbe iniziare a "barare"!
+
+Quando si usa vibe coding o agent-based coding, l'LLM potrebbe:
+- Inserire **patch hardcoded** invece di trasformazioni genuine
+- Proporre soluzioni **non generalizzabili**
+- "Memorizzare" pattern specifici invece di capire il problema
+
+**Come verificare**:
+- Controlla il file `raw_llm_io.txt` per vedere le patch proposte
+- Assicurati che le trasformazioni siano semanticamente equivalenti
+- Prova con programmi diversi per verificare la generalizzazione
+
+---
+
+## ✅ Test di Equivalenza
+
+### Cos'è l'Equivalenza Funzionale
+
+Due binari sono **funzionalmente equivalenti** se:
+- Dati gli **stessi input**, producono gli **stessi output**
+
+### Generazione Automatica Test Cases
+
+Lo script chiede all'LLM di generare test cases analizzando il codice sorgente:
+
+```python
+# Esempio output LLM
+[
+    {"input": "5\n3\n+\n", "description": "Test addizione 5+3"},
+    {"input": "10\n2\n/\n", "description": "Test divisione 10/2"},
+    {"input": "0\n", "description": "Test input zero"}
+]
+```
+
+### Processo di Validazione
+
+1. Esegui **binario originale** con ogni test case → salva output
+2. Esegui **variante** con stessi input → confronta output
+3. Se tutti i test passano → variante **equivalente**
+
+### Output nel Terminale
+
+```
+🧪 Running equivalence tests on gemma3_V1...
+  ✅ Test addizione 5+3: PASS
+  ✅ Test divisione 10/2: PASS
+  ❌ Test input zero: FAIL
+     Expected: "Risultato: 0"
+     Got: "Errore: divisione per zero"
+⚠️ gemma3_V1: 2/3 tests passed
+```
+
+---
+
+## 📊 Metriche e Analisi
+
+### Distanza Euclidea
+
+Misura la **differenza numerica** tra feature vectors dei binari.
+
+```
+Distanza = √[(a₁-b₁)² + (a₂-b₂)² + ... + (aₙ-bₙ)²]
+```
+
+- **0** = binari identici
+- **Più alta** = binari più diversi
+
+### Distanza Coseno
+
+Misura la **differenza direzionale** tra feature vectors (ignora la magnitudine).
+
+```
+Distanza = 1 - (A·B) / (|A|×|B|)
+```
+
+- **0** = stessa direzione (simili)
+- **1** = ortogonali (molto diversi)
+
+### Radar Charts
+
+I radar chart mostrano visivamente come le varianti differiscono dall'originale su più metriche:
+
+- **Dimensione binario**
+- **Numero funzioni**
+- **Entropia**
+- **Complessità ciclomatica**
+- ecc.
+
+### Confronto LLM vs MetaME
+
+L'obiettivo finale è confrontare:
+
+| Metrica | MetaME | LLM |
+|---------|--------|-----|
+| Tasso successo patch | ~100% | Da verificare |
+| Diversità binario | Media | Potenzialmente alta |
+| Equivalenza funzionale | Alta | Da verificare |
+
+---
+
+## 🔧 Risoluzione Problemi
+
+### "Ollama connection failed"
+
+```bash
+# Verifica che Ollama sia in esecuzione
+ollama serve &
+
+# Verifica autenticazione
+ollama signin
+```
+
+### "MetaME not found"
+
+```bash
+# Verifica installazione
+which metame
+pip show metame
+
+# Aggiorna il path in run_experiment.py
+METAME_PATH = "/path/to/your/metame"
+```
+
+### "Keystone assembly failed"
+
+L'istruzione generata dall'LLM non è valida. Possibili cause:
+- Istruzione non supportata (es. `endbr64`)
+- Sintassi errata
+- Riferimenti a simboli non risolti
+
+### "No patches applied"
+
+L'LLM non ha generato patch valide. Prova:
+- Aumentare `LLM_TEMPERATURE` (più creatività)
+- Usare un modello più grande
+- Verificare che il binario abbia funzioni patchabili
+
+### Patch applicate ma binario non funziona
+
+Il meccanismo di rollback dovrebbe prevenire questo, ma se succede:
+- Controlla `raw_llm_io.txt` per vedere le patch
+- Prova con `USE_METAME=True, USE_LLM=False` per verificare il baseline
+
+---
+
+## 📜 Licenza
+
+Questo progetto è sotto licenza MIT - vedi file `LICENSE`.
+
+---
+
+**CodeGenome - run_experiment.py** - Script sperimentale per la ricerca sulla generazione di varianti binarie tramite LLM.

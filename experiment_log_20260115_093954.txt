@@ -1,0 +1,109 @@
+09:39:54 ============================================================
+09:39:54 🧬 CodeGenome Experiment: exp_20260115_093954
+09:39:54 ============================================================
+09:39:54 ✅ Ollama running, model gemma3:12b available
+09:39:54 📄 Loaded source: source_code/calcolatrice.c (1332 chars)
+09:39:54 📁 Experiment directory: workspace/experiments/exp_20260115_093954
+09:39:54 ✅ Original compiled: workspace/experiments/exp_20260115_093954/calcolatrice_original
+09:39:54 
+============================================================
+09:39:54 📦 BINARY MODE: LLM ASM vs MetaME
+09:39:54 ============================================================
+
+09:39:54 📂 Binary Mode: Disassembling workspace/experiments/exp_20260115_093954/calcolatrice_original...
+09:39:54 🧪 Generating test cases from source_code/calcolatrice.c...
+09:40:00 📝 LLM generated 5 test cases
+09:40:00 📝 Saved disassembly: workspace/experiments/exp_20260115_093954/original.asm (9764 chars)
+09:40:00 
+============================================================
+09:40:00 🤖 Model: gemma3:12b (1 variants)
+09:40:00 ============================================================
+09:40:00 
+========================================
+09:40:00 🔄 Generating Variant 1/1 (Model: gemma3:12b)
+09:40:00 ========================================
+09:40:00 🧠 Running multi-aspect LLM transformation (Model: gemma3:12b)...
+09:40:41 ✅ Multi-aspect LLM generated 69 patches
+09:40:41    🔧 Starting Enhanced Patching with verification...
+09:40:41    📋 Using LLM test case for verification: '=== Calcolatrice ===
+1. Addizi...'
+09:40:41    ❌ File offset not found for 0x1020
+09:40:41    ❌ File offset not found for 0x1026
+09:40:41    ❌ File offset not found for 0x102c
+09:40:41    ❌ File offset not found for 0x1034
+09:40:41    ❌ File offset not found for 0x1039
+09:40:41    ⚠️ Patch at 0x103e: New size 3 > Old 2. Too risky.
+09:40:41    ❌ File offset not found for 0x1040
+09:40:41    ❌ File offset not found for 0x1044
+09:40:41    ❌ File offset not found for 0x1049
+09:40:41    ⚠️ Patch at 0x104e: New size 3 > Old 2. Too risky.
+09:40:41    ❌ File offset not found for 0x1050
+09:40:41    ❌ File offset not found for 0x1054
+09:40:41    ❌ File offset not found for 0x1059
+09:40:41    ⚠️ Patch at 0x105e: New size 3 > Old 2. Too risky.
+09:40:41    ❌ File offset not found for 0x1060
+09:40:41    ❌ File offset not found for 0x1064
+09:40:41    ❌ File offset not found for 0x1069
+09:40:41    ⚠️ Patch at 0x106e: New size 3 > Old 2. Too risky.
+09:40:41    ❌ File offset not found for 0x1070
+09:40:41    ❌ File offset not found for 0x1074
+09:40:41    ❌ File offset not found for 0x1079
+09:40:41    ⚠️ Patch at 0x107e: New size 3 > Old 2. Too risky.
+09:40:41    🔄 Rollback 0x1102: patch broke binary
+09:40:41    🔄 Rollback 0x1115: patch broke binary
+09:40:41    🔄 Rollback 0x1128: patch broke binary
+09:40:41    🔄 Rollback 0x113b: patch broke binary
+09:40:41    🔄 Rollback 0x114e: patch broke binary
+09:40:41    🔄 Rollback 0x1155: patch broke binary
+09:40:41    🔄 Rollback 0x131e: patch broke binary
+09:40:41    🔄 Rollback 0x1324: patch broke binary
+09:40:41    🔄 Rollback 0x1328: patch broke binary
+09:40:41    🔄 Rollback 0x132f: patch broke binary
+09:40:41    🔄 Rollback 0x1390: patch broke binary
+09:40:41    🔄 Rollback 0x1394: patch broke binary
+09:40:41    🔄 Rollback 0x1399: patch broke binary
+09:40:41    ❌ File offset not found for 0x100f
+09:40:41    ❌ File offset not found for 0x1016
+09:40:41    ❌ File offset not found for 0x1020
+09:40:41    ❌ Assembly failed for jz    QWORD PTR : Invalid operand (KS_ERR_ASM_INVALIDOPERAND)
+09:40:41    ❌ File offset not found for 0x102c
+09:40:41    ❌ File offset not found for 0x1030
+09:40:41    ❌ File offset not found for 0x103e
+09:40:41    ❌ File offset not found for 0x104e
+09:40:41    ❌ File offset not found for 0x105e
+09:40:41    ❌ File offset not found for 0x106e
+09:40:41    ❌ File offset not found for 0x107e
+09:40:41    ❌ File offset not found for 0x108a
+09:40:41    🔄 Rollback 0x1172: patch broke binary
+09:40:41    🔄 Rollback 0x1215: patch broke binary
+09:40:41    ❌ Assembly failed for mov rax, 10b0; call rax: Invalid operand (KS_ERR_ASM_INVALIDOPERAND)
+09:40:41    ⚠️ Patch at 0x11ec: New size 9 > Old 5. Too risky.
+09:40:41    ⚠️ Patch at 0x1210: New size 9 > Old 5. Too risky.
+09:40:41    ⚠️ Patch at 0x1004: New size 5 > Old 4. Too risky.
+09:40:41    ⚠️ Patch at 0x10e4: New size 5 > Old 4. Too risky.
+09:40:41    ⚠️ Patch at 0x100f: New size 19 > Old 3. Too risky.
+09:40:41    ⚠️ Patch at 0x1102: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x1115: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x1128: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x113b: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x114e: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x1155: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x11c8: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x126b: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x128a: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x12b4: New size 6 > Old 2. Too risky.
+09:40:41    ⚠️ Patch at 0x12b9: New size 7 > Old 1. Too risky.
+09:40:41    ⚠️ Patch at 0x12c1: New size 8 > Old 1. Too risky.
+09:40:41    ⚠️ Patch at 0x12c2: New size 8 > Old 1. Too risky.
+09:40:41    ⚠️ Patch at 0x12c3: New size 9 > Old 3. Too risky.
+09:40:41    ✅ Applied 0 patches.
+09:40:41 ❌ gemma3 V1: Reassembly failed: No patches applied
+09:40:41 ✅ MetaME V1: Generated (0.1s)
+09:40:41 ✅ MetaME V2: Generated (0.1s)
+09:40:41 
+============================================================
+09:40:41 📊 Running Advanced Binary Analysis...
+09:40:41 ============================================================
+09:41:43 📊 Saved CSV reports to workspace/experiments/exp_20260115_093954
+09:41:43 
+🎉 Binary Mode Experiment complete! Results in: workspace/experiments/exp_20260115_093954

@@ -510,56 +510,78 @@ class AdvancedBinaryAnalyzer:
                 self.console.print(f"[blue]  Analyzing function: {fname} @ 0x{func_offset:x}[/blue]")
                 
                 try:
-                    # Calculate cyclomatic complexity for each function
-                    bblocks = self.safe_cmdj(r2, f'afbj @ {func_offset}')
-                    if bblocks:
-                        edges = sum(1 for b in bblocks if b.get('jump', -1) != -1)
-                        nodes = len(bblocks)
-                        complexity = edges - nodes + 2
-                        metrics.complexity += max(complexity, 0)
-
-                    # Use plain text disassembly directly (more reliable than JSON)
-                    insts = []
-                    try:
-                        plain_disasm = r2.cmd(f'pdf @ {func_offset}')
-                        if plain_disasm:
-                            insts = self._parse_plain_disassembly(plain_disasm)
-                    except Exception as e:
-                        # Fallback to JSON if plain fails
-                        insts = self.safe_cmdj(r2, f'pdfj @ {func_offset}')
-                        if not insts:
-                            insts = self.safe_cmdj(r2, f'pdj @ {func_offset}')
+                    # Timeout handler for this function's analysis
+                    import signal
                     
-                    if not insts:
-                        continue
+                    class TimeoutError(Exception):
+                        pass
+                        
+                    def handler(signum, frame):
+                        raise TimeoutError()
+                    
+                    # Register the signal function handler
+                    signal.signal(signal.SIGALRM, handler)
+                    
+                    # Set a timeout for 10 seconds per function
+                    signal.alarm(10)
+                    
+                    try:
+                        # Calculate cyclomatic complexity for each function
+                        bblocks = self.safe_cmdj(r2, f'afbj @ {func_offset}')
+                        if bblocks:
+                            edges = sum(1 for b in bblocks if b.get('jump', -1) != -1)
+                            nodes = len(bblocks)
+                            complexity = edges - nodes + 2
+                            metrics.complexity += max(complexity, 0)
 
-                    valid_insts = [i for i in insts if 'opcode' in i]
-                    count = len(valid_insts)
-                    metrics.function_details[fname]['instructions'] = count
-                    metrics.total_instructions += count
-
-                    # Categorize instructions
-                    for inst in valid_insts:
-                        opcode = inst.get('opcode', '')
-                        if not opcode:
+                        # Use plain text disassembly directly (more reliable than JSON)
+                        insts = []
+                        try:
+                            plain_disasm = r2.cmd(f'pdf @ {func_offset}')
+                            if plain_disasm:
+                                insts = self._parse_plain_disassembly(plain_disasm)
+                        except Exception as e:
+                            # Fallback to JSON if plain fails
+                            insts = self.safe_cmdj(r2, f'pdfj @ {func_offset}')
+                            if not insts:
+                                insts = self.safe_cmdj(r2, f'pdj @ {func_offset}')
+                        
+                        if not insts:
+                            signal.alarm(0) # Disable alarm
                             continue
-                            
-                        op = opcode.split()[0].lower()
-                        ops = opcode.lower()
 
-                        for cat_name, ops_list in INSTRUCTION_CATEGORIES.items():
-                            for instr_op in ops_list:
-                                if instr_op in ops:
-                                    metrics.instruction_mix[cat_name] += 1
-                                    break  # Avoid double counting
+                        valid_insts = [i for i in insts if 'opcode' in i]
+                        count = len(valid_insts)
+                        metrics.function_details[fname]['instructions'] = count
+                        metrics.total_instructions += count
 
-                        # Check for heap operations
-                        if op == 'call':
-                            target = ' '.join(opcode.split()[1:]).lower()
-                            for heap_op in ['malloc', 'free', 'realloc']:
-                                if heap_op in target:
-                                    metrics.heap_operations[heap_op] += 1
+                        # Categorize instructions
+                        for inst in valid_insts:
+                            opcode = inst.get('opcode', '')
+                            if not opcode:
+                                continue
+                                
+                            op = opcode.split()[0].lower()
+                            ops = opcode.lower()
 
+                            for cat_name, ops_list in INSTRUCTION_CATEGORIES.items():
+                                for instr_op in ops_list:
+                                    if instr_op in ops:
+                                        metrics.instruction_mix[cat_name] += 1
+                                        break  # Avoid double counting
+
+                            # Check for heap operations
+                            if op == 'call':
+                                target = ' '.join(opcode.split()[1:]).lower()
+                                for heap_op in ['malloc', 'free', 'realloc']:
+                                    if heap_op in target:
+                                        metrics.heap_operations[heap_op] += 1
+                                        
+                    finally:
+                        signal.alarm(0) # Disable alarm in any case
+
+                except TimeoutError:
+                    self.console.print(f"[yellow]⚠️ Timeout analyzing function {fname} - skipping[/yellow]")
                 except Exception as e:
                     self.console.print(f"[yellow]⚠️ Error processing function {fname}: {str(e)}[/yellow]")
 
@@ -646,20 +668,40 @@ class AdvancedBinaryAnalyzer:
             angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
             angles += angles[:1]  # Close the loop
 
-            fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={'polar': True})
+            fig, ax = plt.subplots(figsize=(14, 11), subplot_kw={'polar': True})
             
-            colors = plt.cm.Set3(np.linspace(0, 1, len(legend_labels)))
+            # High-contrast color palette for better visibility
+            high_contrast_colors = [
+                '#E41A1C',  # Red
+                '#377EB8',  # Blue
+                '#4DAF4A',  # Green
+                '#984EA3',  # Purple
+                '#FF7F00',  # Orange
+                '#FFFF33',  # Yellow
+                '#A65628',  # Brown
+                '#F781BF',  # Pink
+                '#999999',  # Gray
+                '#00CED1',  # Dark Cyan
+            ]
+            
+            # Markers for line differentiation
+            markers = ['o', 's', '^', 'D', 'v', '>', '<', 'p', '*', 'h']
             
             for i, (data, legend) in enumerate(zip(metrics_list, legend_labels)):
                 data = np.concatenate((data, data[:1]))  # Close the loop
-                ax.plot(angles, data, label=legend, linewidth=2, color=colors[i])
-                ax.fill(angles, data, alpha=0.25, color=colors[i])
+                color = high_contrast_colors[i % len(high_contrast_colors)]
+                marker = markers[i % len(markers)]
+                
+                # Draw line with markers
+                ax.plot(angles, data, label=legend, linewidth=2.5, color=color, 
+                       marker=marker, markersize=8, markerfacecolor=color)
+                ax.fill(angles, data, alpha=0.15, color=color)
 
             ax.set_xticks(angles[:-1])
-            ax.set_xticklabels(axis_labels)
+            ax.set_xticklabels(axis_labels, fontsize=10)
             ax.set_yticklabels([])
-            plt.title('Advanced Binary Comparison Analysis', pad=20, fontsize=16)
-            plt.legend(loc='upper right', bbox_to_anchor=(1.4, 1.1))
+            plt.title('Advanced Binary Comparison Analysis', pad=20, fontsize=16, fontweight='bold')
+            plt.legend(loc='upper right', bbox_to_anchor=(1.45, 1.1), fontsize=10)
             plt.tight_layout()
             
             full_output_path = self.analysis_dir / output_file
@@ -789,22 +831,241 @@ class AdvancedBinaryAnalyzer:
         """Print distance matrix in a formatted table."""
         self.console.print(f"\n[bold yellow]{matrix_type} Distance Matrix[/bold yellow]")
         
-        table = Table(box=box.ROUNDED)
-        table.add_column("Binary", style="cyan")
+        # Create short, meaningful labels
+        def shorten_label(label: str) -> str:
+            """Extract meaningful short name from binary filename."""
+            import re
+            # Order matters! Check specific patterns first, then general ones
+            
+            # Binary mode: _llm_asm_v01, _llm_asm_v02
+            if '_llm_asm_v' in label:
+                match = re.search(r'_llm_asm_v(\d+)', label)
+                if match:
+                    return f"llm_asm_{match.group(1)}"
+            
+            # Metame: _metame_v01 or _meta_v01
+            if '_metame_v' in label or '_meta_v' in label:
+                match = re.search(r'_(?:metame|meta)_v(\d+)', label)
+                if match:
+                    return f"meta_{match.group(1)}"
+            
+            # Source mode LLM: _v01, _v02 (but not _llm_asm or _metame)
+            if re.search(r'_v\d+$', label) and '_llm_asm' not in label and '_meta' not in label:
+                match = re.search(r'_v(\d+)$', label)
+                if match:
+                    return f"llm_v{match.group(1)}"
+            
+            # Tigress: _tigress_v01
+            if '_tigress_v' in label:
+                match = re.search(r'_tigress_v(\d+)', label)
+                if match:
+                    return f"tigr_{match.group(1)}"
+            
+            # Original: ends with _original
+            if label.endswith('_original') or '_original_' not in label and '_original' in label:
+                if '_original_' not in label:  # It's THE original, not a variant with original in name
+                    return 'ORIGINAL'
+            
+            # Fallback: take last meaningful part
+            parts = label.split('_')
+            if len(parts) >= 2:
+                return '_'.join(parts[-2:])[:15]
+            return label[:15]
         
-        for label in legend_labels:
-            table.add_column(label[:12], style="green")
+        short_labels = [shorten_label(l) for l in legend_labels]
+        
+        table = Table(box=box.ROUNDED)
+        table.add_column("Binary", style="cyan", min_width=12)
+        
+        for label in short_labels:
+            table.add_column(label, style="green", min_width=10)
         
         for i, row in enumerate(distance_matrix):
-            row_data = [legend_labels[i][:20]] + [f"{d:.6f}" for d in row]
+            row_data = [short_labels[i]] + [f"{d:.6f}" for d in row]
             table.add_row(*row_data)
         
         self.console.print(table)
     
+    def save_distance_matrix_csv(self, distance_matrix: List[List[float]], legend_labels: List[str], 
+                                  output_path: str, matrix_type: str = "distance"):
+        """Save distance matrix to CSV file."""
+        import csv
+        
+        # Create short labels
+        def shorten_label(label: str) -> str:
+            import re
+            if '_llm_asm_v' in label:
+                match = re.search(r'_llm_asm_v(\d+)', label)
+                if match: return f"llm_asm_{match.group(1)}"
+            if '_metame_v' in label or '_meta_v' in label:
+                match = re.search(r'_(?:metame|meta)_v(\d+)', label)
+                if match: return f"meta_{match.group(1)}"
+            if re.search(r'_v\d+$', label) and '_llm_asm' not in label and '_meta' not in label:
+                match = re.search(r'_v(\d+)$', label)
+                if match: return f"llm_v{match.group(1)}"
+            if '_tigress_v' in label:
+                match = re.search(r'_tigress_v(\d+)', label)
+                if match: return f"tigr_{match.group(1)}"
+            if label.endswith('_original') or ('_original' in label and '_original_' not in label):
+                return 'ORIGINAL'
+            # Model-specific patterns (qwen3, gpt, deepseek, etc.)
+            model_patterns = ['qwen3', 'gpt', 'deepseek', 'gemma', 'llama']
+            for mp in model_patterns:
+                if mp in label.lower():
+                    match = re.search(rf'{mp}[^_]*_v(\d+)', label, re.IGNORECASE)
+                    if match: return f"{mp}_v{match.group(1)}"
+            parts = label.split('_')
+            return '_'.join(parts[-2:])[:15] if len(parts) >= 2 else label[:15]
+        
+        short_labels = [shorten_label(l) for l in legend_labels]
+        
+        try:
+            with open(output_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                # Header row
+                writer.writerow(['Binary'] + short_labels)
+                # Data rows
+                for i, row in enumerate(distance_matrix):
+                    writer.writerow([short_labels[i]] + [f"{d:.6f}" for d in row])
+            
+            self.console.print(f"[green]📊 Saved {matrix_type} matrix CSV: {output_path}[/green]")
+        except Exception as e:
+            self.console.print(f"[red]❌ Failed to save CSV: {e}[/red]")
+
+    
+    def select_best_variants(self, legend_labels: List[str], euclidean_matrix: List[List[float]], 
+                            cosine_matrix: List[List[float]]) -> List[int]:
+        """
+        Select indices of best variants (most diverse from original) per model group.
+        
+        Args:
+            legend_labels: List of binary names
+            euclidean_matrix: Euclidean distance matrix
+            cosine_matrix: Cosine distance matrix
+            
+        Returns:
+            List of indices representing best variants to display (always includes original at index 0)
+        """
+        import re
+        
+        # Always include the original (index 0)
+        best_indices = [0]
+        
+        # Group variants by model (extract model name from filename)
+        model_groups = {}  # model_name -> [(index, combined_distance), ...]
+        
+        for i, label in enumerate(legend_labels):
+            if i == 0:  # Skip original
+                continue
+            
+            # Extract model identifier from filename
+            # Pattern: crypto_aes_gpt_oss_v01 -> gpt_oss
+            # Pattern: crypto_aes_deepseek_r1_v02 -> deepseek_r1
+            # Pattern: crypto_aes_metame_v01 -> metame
+            parts = label.replace('_v01', '').replace('_v02', '').replace('_v03', '').split('_')
+            
+            # Try to identify model group
+            if 'metame' in label.lower() or 'meta' in label.lower():
+                model_key = 'metame'
+            elif 'tigress' in label.lower():
+                model_key = 'tigress'
+            else:
+                # For LLM models, extract the model part (last 2-3 parts before version)
+                model_key = '_'.join(parts[-2:]) if len(parts) >= 2 else parts[-1] if parts else 'unknown'
+            
+            # Combined distance = Euclidean + Cosine (both relative to original at index 0)
+            combined_dist = euclidean_matrix[0][i] + cosine_matrix[0][i]
+            
+            if model_key not in model_groups:
+                model_groups[model_key] = []
+            model_groups[model_key].append((i, combined_dist))
+        
+        # For each model group, select the variant with highest combined distance
+        for model_key, variants in model_groups.items():
+            if variants:
+                # Sort by combined distance descending, take first (best)
+                best_variant = max(variants, key=lambda x: x[1])
+                best_indices.append(best_variant[0])
+                self.console.print(f"[cyan]🎯 Best variant for {model_key}: index {best_variant[0]} (dist: {best_variant[1]:.4f})[/cyan]")
+        
+        return sorted(best_indices)
+    
+    def print_average_distances(self, legend_labels: List[str], euclidean_matrix: List[List[float]], 
+                               cosine_matrix: List[List[float]]):
+        """
+        Print tables showing average distances per model group.
+        """
+        import re
+        
+        # Group variants by model
+        model_distances = {}  # model_name -> {'euclidean': [], 'cosine': []}
+        
+        for i, label in enumerate(legend_labels):
+            if i == 0:  # Skip original
+                continue
+            
+            # Extract model identifier (same logic as select_best_variants)
+            if 'metame' in label.lower() or 'meta' in label.lower():
+                model_key = 'MetaME'
+            elif 'tigress' in label.lower():
+                model_key = 'Tigress'
+            else:
+                parts = label.split('_')
+                # Find model name pattern
+                for j, part in enumerate(parts):
+                    if part in ['gpt', 'gemma3', 'deepseek', 'qwq', 'llama']:
+                        model_key = '_'.join(parts[j:j+2]).upper()
+                        break
+                else:
+                    model_key = 'LLM'
+            
+            if model_key not in model_distances:
+                model_distances[model_key] = {'euclidean': [], 'cosine': []}
+            
+            model_distances[model_key]['euclidean'].append(euclidean_matrix[0][i])
+            model_distances[model_key]['cosine'].append(cosine_matrix[0][i])
+        
+        # Print Euclidean average table
+        self.console.print("\n[bold yellow]Average EUCLIDEAN Distance by Model[/bold yellow]")
+        euc_table = Table(box=box.ROUNDED)
+        euc_table.add_column("Model", style="cyan")
+        euc_table.add_column("Avg Distance", style="green")
+        euc_table.add_column("Min", style="blue")
+        euc_table.add_column("Max", style="red")
+        euc_table.add_column("Variants", style="dim")
+        
+        for model, dists in sorted(model_distances.items()):
+            if dists['euclidean']:
+                avg = sum(dists['euclidean']) / len(dists['euclidean'])
+                min_d = min(dists['euclidean'])
+                max_d = max(dists['euclidean'])
+                euc_table.add_row(model, f"{avg:.6f}", f"{min_d:.6f}", f"{max_d:.6f}", str(len(dists['euclidean'])))
+        
+        self.console.print(euc_table)
+        
+        # Print Cosine average table
+        self.console.print("\n[bold yellow]Average COSINE Distance by Model[/bold yellow]")
+        cos_table = Table(box=box.ROUNDED)
+        cos_table.add_column("Model", style="cyan")
+        cos_table.add_column("Avg Distance", style="green")
+        cos_table.add_column("Min", style="blue")
+        cos_table.add_column("Max", style="red")
+        cos_table.add_column("Variants", style="dim")
+        
+        for model, dists in sorted(model_distances.items()):
+            if dists['cosine']:
+                avg = sum(dists['cosine']) / len(dists['cosine'])
+                min_d = min(dists['cosine'])
+                max_d = max(dists['cosine'])
+                cos_table.add_row(model, f"{avg:.6f}", f"{min_d:.6f}", f"{max_d:.6f}", str(len(dists['cosine'])))
+        
+        self.console.print(cos_table)
+    
     def save_analysis_report(self, all_metrics: List[AdvancedBinaryMetrics], 
                             all_radar_metrics: List[List[float]], 
                             legend_labels: List[str], 
-                            output_path: str) -> bool:
+                            output_path: str,
+                            similarity_matrices: Dict[str, Any] = None) -> bool:
         """Save comprehensive analysis report as JSON"""
         try:
             report_data = {
@@ -812,7 +1073,8 @@ class AdvancedBinaryAnalyzer:
                 'total_binaries_analyzed': len(all_metrics),
                 'binaries': {},
                 'comparison_matrices': {},
-                'radar_metrics': {}
+                'radar_metrics': {},
+                'similarity_matrices': similarity_matrices or {}
             }
             
             # Add detailed metrics for each binary
@@ -889,29 +1151,69 @@ class AdvancedBinaryAnalyzer:
         try:
             self.console.print(f"\n[cyan]📊 Generating comparison visualization...[/cyan]")
             
-            # Normalize metrics for radar chart
+            # Normalize metrics for analysis
             norm_metrics = self.normalize_multiple_metrics(all_radar_metrics)
             
-            # Generate radar chart
+            # Calculate FULL distance matrices (for JSON report and best variant selection)
+            euclidean_matrix_full = self.calculate_distance_matrix_euclidean(norm_metrics)
+            cosine_matrix_full = self.calculate_distance_matrix_cosine(norm_metrics)
+            
+            # Select best variants per model group
+            self.console.print(f"\n[cyan]🎯 Selecting best variants per model...[/cyan]")
+            best_indices = self.select_best_variants(legend_labels, euclidean_matrix_full, cosine_matrix_full)
+            
+            # Create filtered lists for visualization (radar, terminal tables, CSV)
+            filtered_metrics = [norm_metrics[i] for i in best_indices]
+            filtered_labels = [legend_labels[i] for i in best_indices]
+            
+            # Generate radar chart with ONLY best variants
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             radar_file = f"advanced_radar_comparison_{timestamp}.png"
-            radar_path = self.plot_radar_comparison(norm_metrics, ANALYSIS_AXES, legend_labels, radar_file)
+            radar_path = self.plot_radar_comparison(filtered_metrics, ANALYSIS_AXES, filtered_labels, radar_file)
             
             if radar_path:
                 self.console.print(f"[green]🎯 Radar chart saved: {radar_path}[/green]")
             
-            # Calculate and display distance matrices
-            self.console.print(f"\n[cyan]📏 Calculating similarity matrices...[/cyan]")
+            # Calculate filtered distance matrices for terminal display
+            euclidean_matrix_filtered = self.calculate_distance_matrix_euclidean(filtered_metrics)
+            cosine_matrix_filtered = self.calculate_distance_matrix_cosine(filtered_metrics)
             
-            euclidean_matrix = self.calculate_distance_matrix_euclidean(norm_metrics)
-            cosine_matrix = self.calculate_distance_matrix_cosine(norm_metrics)
+            # Also calculate RAW (unnormalized) Euclidean distances for paper reporting
+            raw_euclidean_matrix_full = self.calculate_distance_matrix_euclidean(all_radar_metrics)
             
-            self.print_distance_matrix(euclidean_matrix, legend_labels, "EUCLIDEAN")
-            self.print_distance_matrix(cosine_matrix, legend_labels, "COSINE")
+            # Display filtered matrices in terminal (only best variants)
+            self.console.print(f"\n[cyan]📏 Distance Matrices (Best Variants Only)...[/cyan]")
+            self.print_distance_matrix(euclidean_matrix_filtered, filtered_labels, "EUCLIDEAN (Best Variants)")
+            self.print_distance_matrix(cosine_matrix_filtered, filtered_labels, "COSINE (Best Variants)")
             
-            # Save comprehensive report
+            # Display average distances per model (uses full data)
+            self.print_average_distances(legend_labels, euclidean_matrix_full, cosine_matrix_full)
+            
+            # Save distance matrices as CSV
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            self.save_distance_matrix_csv(euclidean_matrix_full, legend_labels, 
+                                          str(self.analysis_dir / f"distance_euclidean_normalized_{timestamp}.csv"), 
+                                          "Euclidean (Normalized)")
+            self.save_distance_matrix_csv(cosine_matrix_full, legend_labels,
+                                          str(self.analysis_dir / f"distance_cosine_{timestamp}.csv"),
+                                          "Cosine")
+            self.save_distance_matrix_csv(raw_euclidean_matrix_full, legend_labels,
+                                          str(self.analysis_dir / f"distance_euclidean_raw_{timestamp}.csv"),
+                                          "Euclidean (RAW - for paper)")
+            
+            # Save comprehensive report with FULL data (all variants)
             report_path = self.analysis_dir / f"advanced_analysis_report_{timestamp}.json"
-            self.save_analysis_report(all_metrics, all_radar_metrics, legend_labels, str(report_path))
+            matrices = {
+                "binaries_all": legend_labels,
+                "euclidean_all": euclidean_matrix_full,
+                "euclidean_raw_all": raw_euclidean_matrix_full,
+                "cosine_all": cosine_matrix_full,
+                "binaries_best": filtered_labels,
+                "euclidean_best": euclidean_matrix_filtered,
+                "cosine_best": cosine_matrix_filtered,
+                "best_variant_indices": best_indices
+            }
+            self.save_analysis_report(all_metrics, all_radar_metrics, legend_labels, str(report_path), similarity_matrices=matrices)
             
             return all_metrics, radar_path
             

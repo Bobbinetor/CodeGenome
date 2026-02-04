@@ -72,7 +72,7 @@ class SuiteConfig(BaseModel):
     workspace_dir: str = "workspace"
     metame_path: str = ""
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "gemma3:12b"
+    ollama_model: str = "gemma3:27b"
     log_level: str = "INFO"
 
 
