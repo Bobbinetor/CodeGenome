@@ -60,3 +60,6 @@ workspace/
 ghidra_scripts/
 old_code/
 
+# OpenRouter API Key
+openrouter.txt
+
