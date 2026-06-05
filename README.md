@@ -421,12 +421,17 @@ We welcome contributions to improve CodeGenome! Areas where you can help:
 If you use CodeGenome in your research or projects, please cite:
 
 ```bibtex
-@software{codegenome_suite,
-  title={CodeGenome: AI-Powered Code Variant Generation with Advanced Binary Analysis},
-  author={Alfredo Petruolo},
-  year={2025},
-  url={https://github.com/bobbinetor/CodeGenome},
-  note={AI-powered system for generating functionally equivalent code variants}
+@article{COPPOLINO2026116056,
+title = {Next-Gen metamorphism: Analyzing the potential of LLM-driven knowledge-based malware evasion},
+journal = {Knowledge-Based Systems},
+volume = {344},
+pages = {116056},
+year = {2026},
+issn = {0950-7051},
+doi = {https://doi.org/10.1016/j.knosys.2026.116056},
+url = {https://www.sciencedirect.com/science/article/pii/S0950705126007823},
+author = {L. Coppolino and A. Iannaccone and R. Nardone and A. Petruolo and L. Romano},
+keywords = {Malware evasion, Code mutation, Metamorphic engines, Signature-based detection, Large language models, Artificial intelligence},
 }
 ```
 
